@@ -4,6 +4,7 @@ import streamlit as st
 from datetime import datetime
 from pycoingecko import CoinGeckoAPI
 import investpy
+import os
 
 st.title("Análisis de Activos Financieros con Fallback Inteligente")
 
@@ -19,25 +20,31 @@ uploaded_file = st.file_uploader("Cargar archivo CSV", type=["csv"])
 
 cg = CoinGeckoAPI()
 
+# Detectar si estamos en Streamlit Cloud
+ES_CLOUD = os.environ.get("STREAMLIT_SERVER_HEADLESS", "") == "1"
+
 # Funciones auxiliares
 
 def analizar_con_yfinance(ticker):
-    data = yf.Ticker(ticker)
-    hist = data.history(start=fecha_inicio, end=fecha_fin)
-    if hist.empty:
+    try:
+        data = yf.Ticker(ticker)
+        hist = data.history(start=fecha_inicio, end=fecha_fin)
+        if hist.empty:
+            return None
+        min_price = hist['Close'].min()
+        max_price = hist['Close'].max()
+        current_price = hist['Close'][-1]
+        subida = (max_price - current_price) / current_price * 100
+        return {
+            "Ticker": ticker,
+            "Fuente": "Yahoo Finance",
+            "Mínimo": round(min_price, 2),
+            "Máximo": round(max_price, 2),
+            "Actual": round(current_price, 2),
+            "% Subida a Máx": round(subida, 2)
+        }
+    except:
         return None
-    min_price = hist['Close'].min()
-    max_price = hist['Close'].max()
-    current_price = hist['Close'][-1]
-    subida = (max_price - current_price) / current_price * 100
-    return {
-        "Ticker": ticker,
-        "Fuente": "Yahoo Finance",
-        "Mínimo": round(min_price, 2),
-        "Máximo": round(max_price, 2),
-        "Actual": round(current_price, 2),
-        "% Subida a Máx": round(subida, 2)
-    }
 
 def analizar_con_coingecko(coin_id):
     try:
@@ -94,13 +101,19 @@ if uploaded_file:
 
     for raw_ticker in df_input['Ticker']:
         raw_ticker = str(raw_ticker).strip()
-        resultado = analizar_con_yfinance(raw_ticker)
+        resultado = None
 
+        # Usar yfinance solo si NO estamos en la nube
+        if not ES_CLOUD:
+            resultado = analizar_con_yfinance(raw_ticker)
+
+        # Si es cripto conocida, probar con CoinGecko
         if not resultado and raw_ticker.lower() in ['btc', 'eth', 'bnb', 'sol', 'ada']:
             resultado = analizar_con_coingecko(raw_ticker.lower())
 
+        # Si todo falla, intentar con Investpy en Brasil
         if not resultado:
-            resultado = analizar_con_investpy(raw_ticker.upper(), 'brazil')  # ejemplo con Brasil como fallback
+            resultado = analizar_con_investpy(raw_ticker.upper(), 'brazil')
 
         if resultado:
             resultados.append(resultado)

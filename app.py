@@ -40,6 +40,18 @@ pais_por_ticker = {
     "EMBR3": "brazil"
 }
 
+# Mapeo de tickers a formatos compatibles con Yahoo Finance / Alpha Vantage
+ticker_map = {
+    "YPFD": "YPF.BA",
+    "TGSU2": "TGSU2.BA",
+    "MIRG": "MIRG.BA",
+    "VISTA": "VIST",
+    "FALABELLA": "FALABELLA.CL",
+    "CEMEXCPO": "CEMEXCPO.MX",
+    "OM:STIL": "STIL.ST",
+    "HLSE:ETTE": "ETTE.HE"
+}
+
 # Funciones auxiliares
 
 def analizar_con_yfinance(ticker):
@@ -142,21 +154,18 @@ if uploaded_file:
 
     for raw_ticker in df_input['Ticker']:
         raw_ticker = str(raw_ticker).strip()
+        ticker_real = ticker_map.get(raw_ticker.upper(), raw_ticker)
         resultado = None
 
-        # Usar yfinance solo si NO estamos en la nube
         if not ES_CLOUD:
-            resultado = analizar_con_yfinance(raw_ticker)
+            resultado = analizar_con_yfinance(ticker_real)
 
-        # Si falla y tenemos Alpha Vantage Key, intentar
         if not resultado and ALPHA_VANTAGE_API_KEY and not ES_CLOUD:
-            resultado = analizar_con_alphavantage(raw_ticker)
+            resultado = analizar_con_alphavantage(ticker_real)
 
-        # Si es una cripto disponible en CoinGecko
         if not resultado and raw_ticker.lower() in criptos_disponibles:
             resultado = analizar_con_coingecko(raw_ticker.lower())
 
-        # Si todo falla, intentar con Investpy según país mapeado
         if not resultado:
             pais = pais_por_ticker.get(raw_ticker.upper(), 'brazil')
             resultado = analizar_con_investpy(raw_ticker.upper(), pais)

@@ -3,3 +3,4 @@ yfinance
 pandas
 pycoingecko
 investpy==1.0.7
+alpha_vantage

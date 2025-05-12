@@ -5,8 +5,9 @@ from datetime import datetime
 from pycoingecko import CoinGeckoAPI
 import investpy
 import os
+from alpha_vantage.timeseries import TimeSeries
 
-st.title("Análisis de Activos Financieros con Fallback Inteligente")
+st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
 
 st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, GLEN.L, PETR4.SA, etc.)")
 
@@ -23,6 +24,22 @@ cg = CoinGeckoAPI()
 # Detectar si estamos en Streamlit Cloud
 ES_CLOUD = os.environ.get("STREAMLIT_SERVER_HEADLESS", "") == "1"
 
+# Obtener API Key de Alpha Vantage desde secrets (o hardcoded para entorno local)
+ALPHA_VANTAGE_API_KEY = st.secrets["ALPHA_VANTAGE_API_KEY"] if "ALPHA_VANTAGE_API_KEY" in st.secrets else os.getenv("ALPHA_VANTAGE_API_KEY", "")
+
+# Mapeo de tickers a países para Investpy
+pais_por_ticker = {
+    "SUPV": "argentina",
+    "BBAR": "argentina",
+    "PAMP": "argentina",
+    "YPFD": "argentina",
+    "TGSU2": "argentina",
+    "FALABELLA": "chile",
+    "CEMEXCPO": "mexico",
+    "EC": "colombia",
+    "EMBR3": "brazil"
+}
+
 # Funciones auxiliares
 
 def analizar_con_yfinance(ticker):
@@ -38,6 +55,29 @@ def analizar_con_yfinance(ticker):
         return {
             "Ticker": ticker,
             "Fuente": "Yahoo Finance",
+            "Mínimo": round(min_price, 2),
+            "Máximo": round(max_price, 2),
+            "Actual": round(current_price, 2),
+            "% Subida a Máx": round(subida, 2)
+        }
+    except:
+        return None
+
+def analizar_con_alphavantage(ticker):
+    try:
+        ts = TimeSeries(key=ALPHA_VANTAGE_API_KEY, output_format='pandas')
+        data, meta = ts.get_daily_adjusted(symbol=ticker, outputsize='full')
+        data = data.sort_index()
+        data = data[(data.index >= pd.to_datetime(fecha_inicio)) & (data.index <= pd.to_datetime(fecha_fin))]
+        if data.empty:
+            return None
+        min_price = data['4. close'].min()
+        max_price = data['4. close'].max()
+        current_price = data['4. close'][-1]
+        subida = (max_price - current_price) / current_price * 100
+        return {
+            "Ticker": ticker,
+            "Fuente": "Alpha Vantage",
             "Mínimo": round(min_price, 2),
             "Máximo": round(max_price, 2),
             "Actual": round(current_price, 2),
@@ -98,6 +138,7 @@ def analizar_con_investpy(nombre, pais):
 if uploaded_file:
     df_input = pd.read_csv(uploaded_file)
     resultados = []
+    criptos_disponibles = [c['id'] for c in cg.get_coins_list()]
 
     for raw_ticker in df_input['Ticker']:
         raw_ticker = str(raw_ticker).strip()
@@ -107,13 +148,18 @@ if uploaded_file:
         if not ES_CLOUD:
             resultado = analizar_con_yfinance(raw_ticker)
 
-        # Si es cripto conocida, probar con CoinGecko
-        if not resultado and raw_ticker.lower() in ['btc', 'eth', 'bnb', 'sol', 'ada']:
+        # Si falla y tenemos Alpha Vantage Key, intentar
+        if not resultado and ALPHA_VANTAGE_API_KEY and not ES_CLOUD:
+            resultado = analizar_con_alphavantage(raw_ticker)
+
+        # Si es una cripto disponible en CoinGecko
+        if not resultado and raw_ticker.lower() in criptos_disponibles:
             resultado = analizar_con_coingecko(raw_ticker.lower())
 
-        # Si todo falla, intentar con Investpy en Brasil
+        # Si todo falla, intentar con Investpy según país mapeado
         if not resultado:
-            resultado = analizar_con_investpy(raw_ticker.upper(), 'brazil')
+            pais = pais_por_ticker.get(raw_ticker.upper(), 'brazil')
+            resultado = analizar_con_investpy(raw_ticker.upper(), pais)
 
         if resultado:
             resultados.append(resultado)

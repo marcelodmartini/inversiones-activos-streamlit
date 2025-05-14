@@ -203,6 +203,29 @@ if uploaded_file:
         resultados.append(resultado)
 
     df_result = pd.DataFrame(resultados)
-    st.dataframe(df_result)
+
+    # Ordenar por riesgo y mover columna semáforo al principio
+    columnas = df_result.columns.tolist()
+    if "Semáforo Riesgo" in columnas:
+        columnas.insert(0, columnas.pop(columnas.index("Semáforo Riesgo")))
+        df_result = df_result[columnas]
+
+    orden_semaforo = {"VERDE": 0, "AMARILLO": 1, "ROJO": 2}
+    df_result["__orden"] = df_result["Semáforo Riesgo"].map(orden_semaforo).fillna(99)
+    df_result = df_result.sort_values("__orden").drop(columns="__orden")
+
+    # Colores personalizados en la grilla de riesgos
+    def resaltar_riesgo(val):
+        color = {
+            "VERDE": "#c8e6c9",     # verde claro
+            "AMARILLO": "#fff9c4",  # amarillo claro
+            "ROJO": "#ffcdd2"       # rojo claro
+        }.get(val, "#eeeeee")      # gris por defecto
+        return f"background-color: {color}; font-weight: bold"
+
+    styled_df = df_result.style.applymap(resaltar_riesgo, subset=["Semáforo Riesgo"])
+
+    st.dataframe(styled_df, use_container_width=True)
+
     csv = df_result.to_csv(index=False).encode('utf-8')
     st.download_button("Descargar resultados en CSV", data=csv, file_name="analisis_completo_activos.csv")

@@ -37,6 +37,8 @@ ticker_map = {
     "FALABELLA": "FALABELLA.CL", "CEMEXCPO": "CEMEXCPO.MX", "OM:STIL": "STIL.ST", "HLSE:ETTE": "ETTE.HE"
 }
 
+from deep_translator import GoogleTranslator
+
 def obtener_info_fundamental(ticker):
     resultado = {
         "País": None, "PEG Ratio": None, "P/E Ratio": None, "P/B Ratio": None,
@@ -50,7 +52,7 @@ def obtener_info_fundamental(ticker):
             info = tkr.info
             resultado.update({
                 "País": info.get("country"),
-                "PEG Ratio": info.get("pegRatio"),
+                "PEG Ratio": info.get("pegRatio"),  # inicial
                 "P/E Ratio": info.get("trailingPE"),
                 "P/B Ratio": info.get("priceToBook"),
                 "ROE": info.get("returnOnEquity"),
@@ -61,8 +63,24 @@ def obtener_info_fundamental(ticker):
                 "Beta": info.get("beta"),
                 "Contexto": info.get("longBusinessSummary"),
             })
+
+            # Calcular PEG Ratio si no vino
+            if resultado.get("PEG Ratio") is None:
+                pe = info.get("trailingPE")
+                growth = info.get("earningsQuarterlyGrowth") or info.get("earningsGrowth")
+                if pe and growth and growth != 0:
+                    resultado["PEG Ratio"] = round(pe / (growth * 100), 2)
+
+            # Calcular FCF Yield si no vino
+            if resultado.get("FCF Yield") is None:
+                fcf = info.get("freeCashflow")
+                market_cap = info.get("marketCap")
+                if fcf and market_cap and market_cap > 0:
+                    resultado["FCF Yield"] = round(fcf / market_cap * 100, 2)
+
             beta = resultado["Beta"] or 0
             resultado["Semáforo Riesgo"] = "ROJO" if beta > 1.5 else ("AMARILLO" if beta > 1 else "VERDE")
+
     except Exception as e:
         print(f"[yfinance] {ticker} -> {e}")
 
@@ -91,7 +109,7 @@ def obtener_info_fundamental(ticker):
     except Exception as e:
         print(f"[fmp] {ticker} -> {e}")
 
-    # Traducir el contexto si está presente
+    # Traducir contexto si existe
     if resultado.get("Contexto"):
         try:
             resultado["Contexto"] = GoogleTranslator(source='auto', target='es').translate(resultado["Contexto"])

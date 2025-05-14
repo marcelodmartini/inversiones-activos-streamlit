@@ -7,6 +7,7 @@ import investpy
 import os
 from alpha_vantage.timeseries import TimeSeries
 import requests
+from deep_translator import GoogleTranslator
 
 st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes.")
 st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, GLEN.L, PETR4.SA, etc.)")
@@ -89,6 +90,13 @@ def obtener_info_fundamental(ticker):
                 })
     except Exception as e:
         print(f"[fmp] {ticker} -> {e}")
+
+    # Traducir el contexto si está presente
+    if resultado.get("Contexto"):
+        try:
+            resultado["Contexto"] = GoogleTranslator(source='auto', target='es').translate(resultado["Contexto"])
+        except Exception as e:
+            print(f"[traducción] {ticker} -> {e}")
 
     return resultado
 

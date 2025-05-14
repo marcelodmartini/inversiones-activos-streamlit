@@ -5,3 +5,4 @@ pycoingecko
 alpha_vantage
 investpy
 requests
+deep-translator

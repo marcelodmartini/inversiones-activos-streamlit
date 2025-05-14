@@ -39,6 +39,8 @@ ticker_map = {
 
 from deep_translator import GoogleTranslator
 
+from deep_translator import GoogleTranslator
+
 def obtener_info_fundamental(ticker):
     resultado = {
         "País": None, "PEG Ratio": None, "P/E Ratio": None, "P/B Ratio": None,
@@ -117,6 +119,7 @@ def obtener_info_fundamental(ticker):
             print(f"[traducción] {ticker} -> {e}")
 
     return resultado
+
 
 def analizar_con_yfinance(ticker):
     try:

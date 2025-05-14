@@ -37,9 +37,38 @@ ticker_map = {
     "FALABELLA": "FALABELLA.CL", "CEMEXCPO": "CEMEXCPO.MX", "OM:STIL": "STIL.ST", "HLSE:ETTE": "ETTE.HE"
 }
 
-from deep_translator import GoogleTranslator
+def calcular_score(resultado):
+    score = 0
+    try:
+        beta = resultado.get("Beta") or 0
+        debt_equity = resultado.get("Debt/Equity") or 999
+        ev_ebitda = resultado.get("EV/EBITDA") or 999
+        roe = resultado.get("ROE") or 0
+        roic = resultado.get("ROIC") or 0
+        peg = resultado.get("PEG Ratio") or 999
+        fcf_yield = resultado.get("FCF Yield") or 0
+        pe = resultado.get("P/E Ratio") or 999
+        pb = resultado.get("P/B Ratio") or 999
+        dividend_yield = resultado.get("Dividend Yield") or 0
 
-from deep_translator import GoogleTranslator
+        if beta <= 1: score += 1
+        if debt_equity < 1: score += 1
+        if ev_ebitda < 15: score += 1
+        if roe > 0.1: score += 1
+        if roic > 0.08: score += 1
+        if peg < 1.5: score += 1
+        if fcf_yield > 5: score += 1
+        if pe < 20: score += 1
+        if pb < 3: score += 1
+        if dividend_yield and dividend_yield > 0.02: score += 1
+
+        if score >= 9: return "⭐⭐⭐⭐⭐ (5/5 - Excelente)", 5
+        elif score >= 7: return "⭐⭐⭐⭐ (4/5 - Muy Bueno)", 4
+        elif score >= 5: return "⭐⭐⭐ (3/5 - Aceptable)", 3
+        elif score >= 3: return "⭐⭐ (2/5 - Riesgoso)", 2
+        else: return "⭐ (1/5 - Débil)", 1
+    except:
+        return "N/A", 0
 
 def obtener_info_fundamental(ticker):
     resultado = {
@@ -229,27 +258,28 @@ if uploaded_file:
             resultado = {"Ticker": raw_ticker, "Error": "No se encontró información en ninguna fuente"}
             resultado.update(info_fundamental)
 
+        score_texto, score_numerico = calcular_score(resultado)
+        resultado["Score Final"] = score_texto
+        resultado["__orden_score"] = score_numerico
+
         resultados.append(resultado)
 
     df_result = pd.DataFrame(resultados)
 
-    # Ordenar por riesgo y mover columna semáforo al principio
     columnas = df_result.columns.tolist()
-    if "Semáforo Riesgo" in columnas:
-        columnas.insert(0, columnas.pop(columnas.index("Semáforo Riesgo")))
-        df_result = df_result[columnas]
+    for col in ["Score Final", "Semáforo Riesgo"]:
+        if col in columnas:
+            columnas.insert(0, columnas.pop(columnas.index(col)))
+    df_result = df_result[columnas]
 
-    orden_semaforo = {"VERDE": 0, "AMARILLO": 1, "ROJO": 2}
-    df_result["__orden"] = df_result["Semáforo Riesgo"].map(orden_semaforo).fillna(99)
-    df_result = df_result.sort_values("__orden").drop(columns="__orden")
+    df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
-    # Colores personalizados en la grilla de riesgos
     def resaltar_riesgo(val):
         color = {
-            "VERDE": "#c8e6c9",     # verde claro
-            "AMARILLO": "#fff9c4",  # amarillo claro
-            "ROJO": "#ffcdd2"       # rojo claro
-        }.get(val, "#eeeeee")      # gris por defecto
+            "VERDE": "#c8e6c9",
+            "AMARILLO": "#fff9c4",
+            "ROJO": "#ffcdd2"
+        }.get(val, "#eeeeee")
         return f"background-color: {color}; font-weight: bold"
 
     styled_df = df_result.style.applymap(resaltar_riesgo, subset=["Semáforo Riesgo"])

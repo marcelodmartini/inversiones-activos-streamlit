@@ -6,6 +6,7 @@ from pycoingecko import CoinGeckoAPI
 import investpy
 import os
 from alpha_vantage.timeseries import TimeSeries
+import requests
 
 st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
 
@@ -21,13 +22,11 @@ uploaded_file = st.file_uploader("Cargar archivo CSV", type=["csv"])
 
 cg = CoinGeckoAPI()
 
-# Detectar si estamos en Streamlit Cloud
 ES_CLOUD = os.environ.get("STREAMLIT_SERVER_HEADLESS", "") == "1"
+ALPHA_VANTAGE_API_KEY = st.secrets.get("ALPHA_VANTAGE_API_KEY", "")
+FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
+FMP_API_KEY = st.secrets.get("FMP_API_KEY", "")
 
-# Obtener API Key de Alpha Vantage desde secrets (o hardcoded para entorno local)
-ALPHA_VANTAGE_API_KEY = st.secrets["ALPHA_VANTAGE_API_KEY"] if "ALPHA_VANTAGE_API_KEY" in st.secrets else os.getenv("ALPHA_VANTAGE_API_KEY", "")
-
-# Mapeo de tickers a países para Investpy
 pais_por_ticker = {
     "SUPV": "argentina",
     "BBAR": "argentina",
@@ -40,7 +39,6 @@ pais_por_ticker = {
     "EMBR3": "brazil"
 }
 
-# Mapeo de tickers a formatos compatibles con Yahoo Finance / Alpha Vantage
 ticker_map = {
     "YPFD": "YPF.BA",
     "TGSU2": "TGSU2.BA",
@@ -52,7 +50,59 @@ ticker_map = {
     "HLSE:ETTE": "ETTE.HE"
 }
 
-# Funciones auxiliares
+def obtener_info_fundamental(ticker):
+    resultado = {
+        "País": None, "PEG Ratio": None, "P/E Ratio": None, "P/B Ratio": None,
+        "ROE": None, "ROIC": None, "FCF Yield": None, "Debt/Equity": None,
+        "EV/EBITDA": None, "Dividend Yield": None, "Beta": None,
+        "Contexto": None, "Semáforo Riesgo": "ROJO"
+    }
+    try:
+        info = yf.Ticker(ticker).info
+        resultado.update({
+            "País": info.get("country"),
+            "PEG Ratio": info.get("pegRatio"),
+            "P/E Ratio": info.get("trailingPE"),
+            "P/B Ratio": info.get("priceToBook"),
+            "ROE": info.get("returnOnEquity"),
+            "ROIC": info.get("returnOnAssets"),
+            "Debt/Equity": info.get("debtToEquity"),
+            "EV/EBITDA": info.get("enterpriseToEbitda"),
+            "Dividend Yield": info.get("dividendYield"),
+            "Beta": info.get("beta"),
+            "Contexto": info.get("longBusinessSummary"),
+        })
+        beta = resultado["Beta"] or 0
+        resultado["Semáforo Riesgo"] = "ROJO" if beta > 1.5 else ("AMARILLO" if beta > 1 else "VERDE")
+    except:
+        pass
+
+    try:
+        if FINNHUB_API_KEY:
+            r = requests.get(f"https://finnhub.io/api/v1/stock/metric?symbol={ticker}&metric=all&token={FINNHUB_API_KEY}")
+            data = r.json().get("metric", {})
+            resultado.update({
+                "FCF Yield": data.get("freeCashFlowYieldAnnual") or resultado["FCF Yield"],
+            })
+    except:
+        pass
+
+    try:
+        if FMP_API_KEY:
+            r = requests.get(f"https://financialmodelingprep.com/api/v3/key-metrics-ttm/{ticker}?apikey={FMP_API_KEY}")
+            if r.status_code == 200:
+                data = r.json()[0] if isinstance(r.json(), list) and r.json() else {}
+                resultado.update({
+                    "EV/EBITDA": data.get("evToEbitda") or resultado["EV/EBITDA"],
+                    "Debt/Equity": data.get("debtEquityRatio") or resultado["Debt/Equity"],
+                    "ROE": data.get("roe") or resultado["ROE"],
+                    "ROIC": data.get("roic") or resultado["ROIC"],
+                    "FCF Yield": data.get("freeCashFlowYield") or resultado["FCF Yield"],
+                })
+    except:
+        pass
+
+    return resultado
 
 def analizar_con_yfinance(ticker):
     try:
@@ -170,10 +220,15 @@ if uploaded_file:
             pais = pais_por_ticker.get(raw_ticker.upper(), 'brazil')
             resultado = analizar_con_investpy(raw_ticker.upper(), pais)
 
+        info_fundamental = obtener_info_fundamental(ticker_real)
+
         if resultado:
+            resultado.update(info_fundamental)
             resultados.append(resultado)
         else:
-            resultados.append({"Ticker": raw_ticker, "Error": "No se encontró información en ninguna fuente"})
+            resultado = {"Ticker": raw_ticker, "Error": "No se encontró información en ninguna fuente"}
+            resultado.update(info_fundamental)
+            resultados.append(resultado)
 
     df_result = pd.DataFrame(resultados)
     st.dataframe(df_result)

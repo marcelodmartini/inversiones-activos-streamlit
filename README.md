@@ -1,29 +1,28 @@
 # 📊 Análisis de Activos Financieros con Fallback Inteligente
 
-Esta aplicación de Streamlit permite analizar múltiples activos financieros (acciones, criptomonedas, ETFs) y calcular:
+Esta aplicación en Streamlit permite analizar acciones, CEDEARs y criptomonedas a través de múltiples fuentes de datos en tiempo real y fundamentales.
 
-- Precio mínimo histórico (en un rango elegido)
-- Precio máximo histórico
-- Precio actual
-- % de subida al máximo
+## 🚀 ¿Qué ofrece?
 
-Funciona incluso si los datos no están disponibles en la fuente principal (`yfinance`), gracias al uso de múltiples fuentes alternativas como CoinGecko e Investpy.
+- Consulta de precios históricos ajustados
+- Cálculo automático de máximos, mínimos y potencial de subida
+- Integración con:
+  - Yahoo Finance
+  - Alpha Vantage
+  - Finnhub
+  - Financial Modeling Prep (FMP)
+  - CoinGecko (criptomonedas)
+  - Investpy (acciones LATAM y Europa)
+- Datos fundamentales clave:
+  - PEG, P/E, P/B, ROE, ROIC
+  - EV/EBITDA, Debt/Equity, Dividend Yield
+  - FCF Yield
+  - Contexto de empresa y país
+- Clasificación de riesgo: Semáforo (VERDE, AMARILLO, ROJO)
 
----
+## 📦 Requisitos
 
-## 🚀 ¿Qué hace?
-
-🔍 Intenta encontrar información del activo usando:
-
-1. Yahoo Finance (`yfinance`)
-2. CoinGecko (`pycoingecko`) – solo para criptomonedas como BTC, ETH, SOL, ADA
-3. Investing.com (`investpy`) – fallback para acciones internacionales, con soporte de países como Brasil, México, Argentina, etc.
-
----
-
-## 📥 Cómo usar
-
-### Requisitos
+Instalá las dependencias con:
 
 ```bash
 pip install -r requirements.txt

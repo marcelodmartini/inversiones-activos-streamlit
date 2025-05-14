@@ -179,19 +179,20 @@ if uploaded_file:
     for raw_ticker in df_input['Ticker']:
         raw_ticker = str(raw_ticker).strip()
         ticker_real = ticker_map.get(raw_ticker.upper(), raw_ticker)
+        ticker_clean = raw_ticker.upper()
         resultado = None
 
         if not ES_CLOUD:
             resultado = analizar_con_yfinance(ticker_real)
         if not resultado and ALPHA_VANTAGE_API_KEY and not ES_CLOUD:
-            resultado = analizar_con_alphavantage(ticker_real)
+            resultado = analizar_con_alphavantage(ticker_clean)
         if not resultado and raw_ticker.lower() in criptos_disponibles:
             resultado = analizar_con_coingecko(raw_ticker.lower())
         if not resultado:
             pais = pais_por_ticker.get(raw_ticker.upper(), 'brazil')
-            resultado = analizar_con_investpy(raw_ticker.upper(), pais)
+            resultado = analizar_con_investpy(ticker_clean, pais)
 
-        info_fundamental = obtener_info_fundamental(ticker_real)
+        info_fundamental = obtener_info_fundamental(ticker_clean)
 
         if resultado:
             resultado.update(info_fundamental)

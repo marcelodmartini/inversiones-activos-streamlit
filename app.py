@@ -8,7 +8,7 @@ import os
 from alpha_vantage.timeseries import TimeSeries
 import requests
 
-st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
+st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes.")
 st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, GLEN.L, PETR4.SA, etc.)")
 
 col1, col2 = st.columns(2)

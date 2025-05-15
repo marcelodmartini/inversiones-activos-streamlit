@@ -109,9 +109,6 @@ def obtener_info_fundamental(ticker):
         "Contexto": None, "Semáforo Riesgo": "ROJO", "Tipo": "Bono" if es_bono else "Acción"
     }
 
-    if es_bono:
-        return resultado
-
     try:
         tkr = yf.Ticker(ticker)
         if hasattr(tkr, "info") and isinstance(tkr.info, dict):
@@ -177,9 +174,12 @@ def obtener_info_fundamental(ticker):
     completos = sum([1 for k in indicadores_clave if resultado.get(k) is not None])
     resultado["Cobertura"] = f"{completos}/{len(indicadores_clave)}"
 
-    if resultado["Tipo"] == "Bono" and completos == 0:
+    if resultado["Tipo"] == "Bono":
+        indicadores_clave = ["Dividend Yield", "Beta", "P/B Ratio"]
+        completos = sum([1 for k in indicadores_clave if resultado.get(k) is not None])
+        resultado["Cobertura"] = f"{completos}/{len(indicadores_clave)}"
+    if completos == 0:
         resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
-
     return resultado
 
 def analizar_con_yfinance(ticker):

@@ -9,10 +9,10 @@ from alpha_vantage.timeseries import TimeSeries
 import requests
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
-import matplotlib.pyplot as plt
+import re
 
 st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
-st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, GLEN.L, PETR4.SA, etc.)")
+st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, AL30D, etc.)")
 
 col1, col2 = st.columns(2)
 with col1:
@@ -28,24 +28,56 @@ ALPHA_VANTAGE_API_KEY = st.secrets.get("ALPHA_VANTAGE_API_KEY", "")
 FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
 FMP_API_KEY = st.secrets.get("FMP_API_KEY", "")
 
-# Función de scraping de precios de bonos desde Rava
+def es_bono_argentino(ticker):
+    return bool(re.match(r"^(AL|GD|TX|TV|AE|TB)[0-9]+[D]?$", ticker.upper()))
+
 
 def obtener_precio_bono_rava(ticker):
     try:
-        url = f"https://www.rava.com/perfil/{ticker}"
+        url = f"https://www.rava.com/perfil/{ticker}/historial"
         headers = {"User-Agent": "Mozilla/5.0"}
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200:
             return None
+        if r.status_code == 403:
+            print(f"[Rava] Acceso denegado (403) para {ticker}. Posible bloqueo de IP.")
+            return None
+
+        if "Demasiadas solicitudes" in r.text or "Forbidden" in r.text:
+            print(f"[Rava] Posible bloqueo por rate limit o acceso denegado para {ticker}")
+            return None
+
         soup = BeautifulSoup(r.text, 'html.parser')
-        elemento_precio = soup.find("div", class_="col-6 col-md-3 text-end")
-        if elemento_precio:
-            texto = elemento_precio.text.strip().replace("$", "").replace(",", ".")
-            precio = float(texto)
-            return precio
+        tabla = soup.find("table")
+        if not tabla:
+            return None
+        rows = tabla.find_all("tr")[1:]
+        precios = []
+        for row in rows:
+            cols = row.find_all("td")
+            if len(cols) >= 5:
+                try:
+                    cierre = float(cols[4].text.strip().replace("$", "").replace(",", "."))
+                    precios.append(cierre)
+                except:
+                    continue
+        if not precios:
+            return None
+        min_price = min(precios)
+        max_price = max(precios)
+        current_price = precios[-1]
+        subida = (max_price - current_price) / current_price * 100
+        return {
+            "Ticker": ticker,
+            "Actual": round(current_price, 2),
+            "Mínimo": round(min_price, 2),
+            "Máximo": round(max_price, 2),
+            "% Subida a Máx": round(subida, 2),
+            "Fuente": "Rava Bursátil (Historial)"
+        }
     except Exception as e:
-        print(f"[Rava] Error al obtener precio para {ticker}: {e}")
-    return None
+        print(f"[Rava Historial] Error con {ticker}: {e}")
+        return None
 
 # Función de cálculo de score
 
@@ -101,7 +133,7 @@ ticker_map = {
 # Función de obtención de info fundamental
 
 def obtener_info_fundamental(ticker):
-    es_bono = ticker.upper().startswith(("AL", "GD", "TX", "TV"))
+    es_bono = es_bono_argentino(ticker)
     resultado = {
         "País": None, "PEG Ratio": None, "P/E Ratio": None, "P/B Ratio": None,
         "ROE": None, "ROIC": None, "FCF Yield": None, "Debt/Equity": None,
@@ -274,7 +306,7 @@ if uploaded_file:
         raw_ticker = str(raw_ticker).strip()
         ticker_real = ticker_map.get(raw_ticker.upper(), raw_ticker)
         ticker_clean = raw_ticker.upper()
-        es_bono = ticker_clean.startswith(("AL", "GD", "TX", "TV"))
+        es_bono = es_bono_argentino(ticker)
         resultado = None
 
         if not ES_CLOUD:
@@ -291,24 +323,20 @@ if uploaded_file:
         if not resultado and es_bono:
             precio_rava = obtener_precio_bono_rava(ticker_clean)
             if precio_rava:
-                resultado = {
-                    "Ticker": ticker_clean,
-                    "Fuente": "Rava Bursátil",
-                    "Actual": precio_rava,
-                    "Mínimo": None,
-                    "Máximo": None,
-                    "% Subida a Máx": None,
-                    "Advertencia": "⚠️ Solo precio disponible, sin métricas fundamentales",
-                    "Tipo": "Bono"
-                }
+                resultado = precio_rava
+                resultado["Tipo"] = "Bono"
+                resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
+
 
         info_fundamental = obtener_info_fundamental(ticker_clean)
 
         if resultado:
-            resultado.update(info_fundamental)
+            resultado.update({k: v for k, v in info_fundamental.items() if k not in resultado or resultado[k] is None})
         else:
-            resultado = {"Ticker": raw_ticker, "Error": "No se encontró información en ninguna fuente"}
-            resultado.update(info_fundamental)
+            resultado = info_fundamental
+            resultado["Ticker"] = raw_ticker
+            resultado["Error"] = "No se encontró información en ninguna fuente"
+
 
         score_texto, score_numerico = calcular_score(resultado)
         resultado["Score Final"] = score_texto
@@ -337,12 +365,15 @@ if uploaded_file:
     df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
     def resaltar_riesgo(val):
+        if not val or not isinstance(val, str):
+            return ""
         color = {
             "VERDE": "#c8e6c9",
             "AMARILLO": "#fff9c4",
             "ROJO": "#ffcdd2"
-        }.get(val, "#eeeeee")
+        }.get(val.upper(), "#eeeeee")
         return f"background-color: {color}; font-weight: bold"
+
 
     styled_df = df_result.style.applymap(resaltar_riesgo, subset=["Semáforo Riesgo"])
     st.dataframe(styled_df, use_container_width=True)

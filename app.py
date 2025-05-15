@@ -31,7 +31,6 @@ FMP_API_KEY = st.secrets.get("FMP_API_KEY", "")
 def es_bono_argentino(ticker):
     return bool(re.match(r"^(AL|GD|TX|TV|AE|TB)[0-9]+[D]?$", ticker.upper()))
 
-
 def obtener_precio_bono_rava(ticker):
     try:
         url = f"https://www.rava.com/perfil/{ticker}/historial"
@@ -39,14 +38,9 @@ def obtener_precio_bono_rava(ticker):
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200:
             return None
-        if r.status_code == 403:
-            print(f"[Rava] Acceso denegado (403) para {ticker}. Posible bloqueo de IP.")
+        if r.status_code == 403 or "Demasiadas solicitudes" in r.text or "Forbidden" in r.text:
+            print(f"[Rava] Acceso denegado para {ticker}")
             return None
-
-        if "Demasiadas solicitudes" in r.text or "Forbidden" in r.text:
-            print(f"[Rava] Posible bloqueo por rate limit o acceso denegado para {ticker}")
-            return None
-
         soup = BeautifulSoup(r.text, 'html.parser')
         tabla = soup.find("table")
         if not tabla:
@@ -78,6 +72,7 @@ def obtener_precio_bono_rava(ticker):
     except Exception as e:
         print(f"[Rava Historial] Error con {ticker}: {e}")
         return None
+
 
 # Función de cálculo de score
 

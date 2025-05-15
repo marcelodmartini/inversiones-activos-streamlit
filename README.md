@@ -102,3 +102,60 @@ Podés expandir el modelo para incluir:
 
 ---
 Hecho con ❤️ y múltiples APIs por [marcelodmartini]
+
+# Análisis de Activos Financieros con Fallback Inteligente
+
+Este proyecto permite analizar acciones, bonos y criptomonedas utilizando múltiples fuentes de datos como Yahoo Finance, Alpha Vantage, CoinGecko, InvestPy y Rava Bursátil, con un sistema de fallback inteligente y cálculo de indicadores financieros clave.
+
+## Características
+
+- ✅ Carga de tickers desde archivo CSV
+- ✅ Soporte extendido para acciones, bonos y criptomonedas
+- ✅ Fallback automático entre múltiples fuentes
+- ✅ Análisis fundamental con score de inversión del 1 al 5
+- ✅ Detección automática de bonos por ticker
+- ✅ Traducción automática de contexto empresarial
+- ✅ Visualización con gráfico de barras horizontal
+- ✅ Scraping de precios desde Rava si no hay datos en APIs
+- ✅ Exportación de resultados a CSV
+
+## Requisitos
+
+- Python 3.8+
+- Archivo CSV con una columna llamada `Ticker`
+
+## Uso
+
+1. Instalar dependencias:
+   ```
+   pip install -r requirements.txt
+   ```
+
+2. Ejecutar la aplicación:
+   ```
+   streamlit run app.py
+   ```
+
+3. Subir tu archivo CSV y visualizar los resultados directamente desde la interfaz web.
+
+## API Keys necesarias (colocar en `.streamlit/secrets.toml`):
+
+```toml
+ALPHA_VANTAGE_API_KEY = "tu_api_key"
+FINNHUB_API_KEY = "tu_api_key"
+FMP_API_KEY = "tu_api_key"
+```
+
+## Créditos
+
+- [yFinance](https://pypi.org/project/yfinance/)
+- [CoinGecko API](https://www.coingecko.com/en/api)
+- [Alpha Vantage](https://www.alphavantage.co/)
+- [Financial Modeling Prep](https://financialmodelingprep.com/)
+- [InvestPy](https://github.com/alvarobartt/investpy)
+- [Rava Bursátil](https://www.rava.com/)
+
+---
+
+**Desarrollado para inversores exigentes que buscan decisiones basadas en datos.**
+

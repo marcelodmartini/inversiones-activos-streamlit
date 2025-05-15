@@ -1,8 +1,11 @@
-streamlit
 yfinance
+streamlit
 pandas
 pycoingecko
-alpha_vantage
 investpy
+alpha_vantage
 requests
+beautifulsoup4
 deep-translator
+matplotlib
+

@@ -7,9 +7,11 @@ import investpy
 import os
 from alpha_vantage.timeseries import TimeSeries
 import requests
+from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
+import matplotlib.pyplot as plt
 
-st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes.")
+st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
 st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, GLEN.L, PETR4.SA, etc.)")
 
 col1, col2 = st.columns(2)
@@ -26,18 +28,31 @@ ALPHA_VANTAGE_API_KEY = st.secrets.get("ALPHA_VANTAGE_API_KEY", "")
 FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
 FMP_API_KEY = st.secrets.get("FMP_API_KEY", "")
 
-pais_por_ticker = {
-    "SUPV": "argentina", "BBAR": "argentina", "PAMP": "argentina",
-    "YPFD": "argentina", "TGSU2": "argentina", "FALABELLA": "chile",
-    "CEMEXCPO": "mexico", "EC": "colombia", "EMBR3": "brazil"
-}
+# Función de scraping de precios de bonos desde Rava
 
-ticker_map = {
-    "YPFD": "YPF.BA", "TGSU2": "TGSU2.BA", "MIRG": "MIRG.BA", "VISTA": "VIST",
-    "FALABELLA": "FALABELLA.CL", "CEMEXCPO": "CEMEXCPO.MX", "OM:STIL": "STIL.ST", "HLSE:ETTE": "ETTE.HE"
-}
+def obtener_precio_bono_rava(ticker):
+    try:
+        url = f"https://www.rava.com/perfil/{ticker}"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.status_code != 200:
+            return None
+        soup = BeautifulSoup(r.text, 'html.parser')
+        elemento_precio = soup.find("div", class_="col-6 col-md-3 text-end")
+        if elemento_precio:
+            texto = elemento_precio.text.strip().replace("$", "").replace(",", ".")
+            precio = float(texto)
+            return precio
+    except Exception as e:
+        print(f"[Rava] Error al obtener precio para {ticker}: {e}")
+    return None
+
+# Función de cálculo de score
 
 def calcular_score(resultado):
+    if resultado.get("Tipo") == "Bono":
+        return "N/A", 0
+
     score = 0
     try:
         beta = resultado.get("Beta") or 0
@@ -70,20 +85,40 @@ def calcular_score(resultado):
     except:
         return "N/A", 0
 
+# Mapeo de países y tickers
+
+pais_por_ticker = {
+    "SUPV": "argentina", "BBAR": "argentina", "PAMP": "argentina",
+    "YPFD": "argentina", "TGSU2": "argentina", "FALABELLA": "chile",
+    "CEMEXCPO": "mexico", "EC": "colombia", "EMBR3": "brazil"
+}
+
+ticker_map = {
+    "YPFD": "YPF.BA", "TGSU2": "TGSU2.BA", "MIRG": "MIRG.BA", "VISTA": "VIST",
+    "FALABELLA": "FALABELLA.CL", "CEMEXCPO": "CEMEXCPO.MX", "OM:STIL": "STIL.ST", "HLSE:ETTE": "ETTE.HE"
+}
+
+# Función de obtención de info fundamental
+
 def obtener_info_fundamental(ticker):
+    es_bono = ticker.upper().startswith(("AL", "GD", "TX", "TV"))
     resultado = {
         "País": None, "PEG Ratio": None, "P/E Ratio": None, "P/B Ratio": None,
         "ROE": None, "ROIC": None, "FCF Yield": None, "Debt/Equity": None,
         "EV/EBITDA": None, "Dividend Yield": None, "Beta": None,
-        "Contexto": None, "Semáforo Riesgo": "ROJO"
+        "Contexto": None, "Semáforo Riesgo": "ROJO", "Tipo": "Bono" if es_bono else "Acción"
     }
+
+    if es_bono:
+        return resultado
+
     try:
         tkr = yf.Ticker(ticker)
         if hasattr(tkr, "info") and isinstance(tkr.info, dict):
             info = tkr.info
             resultado.update({
                 "País": info.get("country"),
-                "PEG Ratio": info.get("pegRatio"),  # inicial
+                "PEG Ratio": info.get("pegRatio"),
                 "P/E Ratio": info.get("trailingPE"),
                 "P/B Ratio": info.get("priceToBook"),
                 "ROE": info.get("returnOnEquity"),
@@ -92,26 +127,20 @@ def obtener_info_fundamental(ticker):
                 "EV/EBITDA": info.get("enterpriseToEbitda"),
                 "Dividend Yield": info.get("dividendYield"),
                 "Beta": info.get("beta"),
-                "Contexto": info.get("longBusinessSummary"),
+                "Contexto": info.get("longBusinessSummary")
             })
-
-            # Calcular PEG Ratio si no vino
             if resultado.get("PEG Ratio") is None:
                 pe = info.get("trailingPE")
                 growth = info.get("earningsQuarterlyGrowth") or info.get("earningsGrowth")
                 if pe and growth and growth != 0:
                     resultado["PEG Ratio"] = round(pe / (growth * 100), 2)
-
-            # Calcular FCF Yield si no vino
             if resultado.get("FCF Yield") is None:
                 fcf = info.get("freeCashflow")
                 market_cap = info.get("marketCap")
                 if fcf and market_cap and market_cap > 0:
                     resultado["FCF Yield"] = round(fcf / market_cap * 100, 2)
-
             beta = resultado["Beta"] or 0
             resultado["Semáforo Riesgo"] = "ROJO" if beta > 1.5 else ("AMARILLO" if beta > 1 else "VERDE")
-
     except Exception as e:
         print(f"[yfinance] {ticker} -> {e}")
 
@@ -119,9 +148,7 @@ def obtener_info_fundamental(ticker):
         if FINNHUB_API_KEY:
             r = requests.get(f"https://finnhub.io/api/v1/stock/metric?symbol={ticker}&metric=all&token={FINNHUB_API_KEY}")
             data = r.json().get("metric", {})
-            resultado.update({
-                "FCF Yield": data.get("freeCashFlowYieldAnnual") or resultado["FCF Yield"],
-            })
+            resultado["FCF Yield"] = data.get("freeCashFlowYieldAnnual") or resultado["FCF Yield"]
     except Exception as e:
         print(f"[finnhub] {ticker} -> {e}")
 
@@ -135,19 +162,26 @@ def obtener_info_fundamental(ticker):
                     "Debt/Equity": data.get("debtEquityRatio") or resultado["Debt/Equity"],
                     "ROE": data.get("roe") or resultado["ROE"],
                     "ROIC": data.get("roic") or resultado["ROIC"],
-                    "FCF Yield": data.get("freeCashFlowYield") or resultado["FCF Yield"],
+                    "FCF Yield": data.get("freeCashFlowYield") or resultado["FCF Yield"]
                 })
     except Exception as e:
         print(f"[fmp] {ticker} -> {e}")
 
-    # Traducir contexto si existe
     if resultado.get("Contexto"):
         try:
             resultado["Contexto"] = GoogleTranslator(source='auto', target='es').translate(resultado["Contexto"])
         except Exception as e:
             print(f"[traducción] {ticker} -> {e}")
 
+    indicadores_clave = ["PEG Ratio", "P/E Ratio", "P/B Ratio", "ROE", "FCF Yield", "Beta"]
+    completos = sum([1 for k in indicadores_clave if resultado.get(k) is not None])
+    resultado["Cobertura"] = f"{completos}/{len(indicadores_clave)}"
+
+    if resultado["Tipo"] == "Bono" and completos == 0:
+        resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
+
     return resultado
+
 
 
 def analizar_con_yfinance(ticker):
@@ -165,7 +199,8 @@ def analizar_con_yfinance(ticker):
             "Mínimo": round(min_price, 2), "Máximo": round(max_price, 2),
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
-    except:
+    except Exception as e:
+        print(f"[Yahoo Finance] Error con {ticker}: {e}")
         return None
 
 def analizar_con_alphavantage(ticker):
@@ -185,7 +220,8 @@ def analizar_con_alphavantage(ticker):
             "Mínimo": round(min_price, 2), "Máximo": round(max_price, 2),
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
-    except:
+    except Exception as e:
+        print(f"[AlphaVantage] Error con {ticker}: {e}")
         return None
 
 def analizar_con_coingecko(coin_id):
@@ -207,7 +243,8 @@ def analizar_con_coingecko(coin_id):
             "Mínimo": round(min_price, 2), "Máximo": round(max_price, 2),
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
-    except:
+    except Exception as e:
+        print(f"[CoinGecko] Error con {coin_id}: {e}")
         return None
 
 def analizar_con_investpy(nombre, pais):
@@ -226,7 +263,8 @@ def analizar_con_investpy(nombre, pais):
             "Mínimo": round(min_price, 2), "Máximo": round(max_price, 2),
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
-    except:
+    except Exception as e:
+        print(f"[Investpy] Error con {nombre}: {e}")
         return None
 
 if uploaded_file:

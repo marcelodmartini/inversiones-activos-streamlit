@@ -1,5 +1,53 @@
 # Análisis de Activos Financieros con Fallback Inteligente y Score Unificado
 
+Aquí tienes el contenido para un archivo `README.md` que explica detalladamente el significado de cada columna del análisis financiero generado por tu script:
+
+---
+
+# 📊 Análisis de Activos Financieros — Descripción de Columnas
+
+Este documento explica el significado de cada columna incluida en el análisis generado por la aplicación Streamlit `Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes`. El archivo CSV descargable contiene un resumen completo de activos como acciones, bonos y criptomonedas con métricas clave.
+
+---
+
+## 🗂️ Columnas del Informe
+
+| Columna             | Descripción                                                                                                                                            |
+| ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **Score Final**     | Calificación general del activo basada en un sistema de puntuación de 1 a 5 estrellas, según métricas financieras clave.                               |
+| **Semáforo Riesgo** | Indicador visual de riesgo basado en la volatilidad (Beta): <br>🟢 **VERDE**: Bajo riesgo<br>🟡 **AMARILLO**: Riesgo medio<br>🔴 **ROJO**: Riesgo alto |
+| **Ticker**          | Código identificador del activo, usado por plataformas financieras (ej: `AAPL`, `AL30D`, `BTC`).                                                       |
+| **Fuente**          | Fuente de donde se obtuvo el precio del activo: puede ser *Yahoo Finance*, *Alpha Vantage*, *Investpy*, *CoinGecko*, o *Rava*.                         |
+| **Mínimo**          | Precio mínimo registrado dentro del rango de fechas seleccionado.                                                                                      |
+| **Máximo**          | Precio máximo registrado dentro del mismo período.                                                                                                     |
+| **Actual**          | Precio actual del activo según la última cotización disponible.                                                                                        |
+| **% Subida a Máx**  | Potencial de revalorización hasta el máximo histórico dentro del período (%).                                                                          |
+| **Tipo**            | Clasificación del activo: `"Acción"`, `"Bono"` o `"Criptomoneda"`.                                                                                     |
+| **Advertencia**     | Mensaje opcional si no se encontraron datos fundamentales completos. Puede aparecer: `⚠️ Solo precio disponible, sin métricas fundamentales`.          |
+| **País**            | País de origen de la empresa emisora o del activo.                                                                                                     |
+| **PEG Ratio**       | Relación Precio/Beneficio ajustada al crecimiento. Valor ideal: < 1.5.                                                                                 |
+| **P/E Ratio**       | Relación Precio/Utilidad (Price to Earnings). Menor a 20 es ideal en términos generales.                                                               |
+| **P/B Ratio**       | Relación Precio/Valor Libro. Ideal: < 3 para evitar sobrevaloración.                                                                                   |
+| **ROE**             | Rentabilidad sobre el Patrimonio (Return on Equity). Mide eficiencia financiera. Ideal: > 10%.                                                         |
+| **ROIC**            | Rentabilidad sobre el Capital Invertido (Return on Invested Capital). Ideal: > 8%.                                                                     |
+| **FCF Yield**       | Rendimiento del Flujo de Caja Libre (%). Ideal: > 5%.                                                                                                  |
+| **Debt/Equity**     | Proporción de deuda respecto al capital propio. Ideal: < 1.                                                                                            |
+| **EV/EBITDA**       | Relación entre Valor Empresa y EBITDA. Valor inferior a 15 es generalmente positivo.                                                                   |
+| **Dividend Yield**  | Rentabilidad por dividendos (%). Ideal para inversores de ingresos: > 2%.                                                                              |
+| **Beta**            | Volatilidad relativa del activo respecto al mercado. Beta < 1 indica menor riesgo.                                                                     |
+| **Contexto**        | Breve resumen de la empresa o activo, traducido automáticamente al español.                                                                            |
+| **Cobertura**       | Indica cuántas de las métricas fundamentales clave fueron obtenidas. Ejemplo: `5/6`.                                                                   |
+| **Error**           | Campo opcional que aparece si no se pudo obtener ninguna información del activo.                                                                       |
+
+---
+
+## 📝 Notas Adicionales
+
+* Si un activo no cuenta con datos fundamentales suficientes, solo se mostrará el precio y se incluirá una advertencia.
+* Los valores se calculan para el rango de fechas indicado por el usuario al inicio de la aplicación.
+* El sistema puede usar varias fuentes alternativas automáticamente (fallback) en caso de que una no proporcione datos.
+
+
 Esta app desarrollada en Streamlit permite analizar acciones, criptomonedas y activos bursátiles de múltiples países y fuentes, generando una grilla con indicadores financieros clave, semáforo de riesgo y un **score final del 1 al 5** que evalúa la calidad de inversión de cada activo.
 
 ## 📥 ¿Cómo usar?

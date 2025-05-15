@@ -190,7 +190,7 @@ def analizar_con_yfinance(ticker):
             return None
         min_price = hist['Close'].min()
         max_price = hist['Close'].max()
-        current_price = hist['Close'][-1]
+        current_price = hist['Close'].iloc[-1]
         subida = (max_price - current_price) / current_price * 100
         return {
             "Ticker": ticker, "Fuente": "Yahoo Finance",
@@ -328,7 +328,11 @@ if uploaded_file:
             columnas.append(extra_col)
 
     df_result = df_result[columnas]
-    df_result["Advertencia"] = df_result.get("Advertencia", "").fillna("")
+    if "Advertencia" not in df_result.columns:
+        df_result["Advertencia"] = ""
+    else:
+        df_result["Advertencia"] = df_result["Advertencia"].fillna("")
+
 
     df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 

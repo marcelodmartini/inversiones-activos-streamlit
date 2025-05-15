@@ -182,8 +182,6 @@ def obtener_info_fundamental(ticker):
 
     return resultado
 
-
-
 def analizar_con_yfinance(ticker):
     try:
         data = yf.Ticker(ticker)
@@ -276,6 +274,7 @@ if uploaded_file:
         raw_ticker = str(raw_ticker).strip()
         ticker_real = ticker_map.get(raw_ticker.upper(), raw_ticker)
         ticker_clean = raw_ticker.upper()
+        es_bono = ticker_clean.startswith(("AL", "GD", "TX", "TV"))
         resultado = None
 
         if not ES_CLOUD:
@@ -287,6 +286,21 @@ if uploaded_file:
         if not resultado:
             pais = pais_por_ticker.get(raw_ticker.upper(), 'brazil')
             resultado = analizar_con_investpy(ticker_clean, pais)
+
+        # Fallback adicional para bonos sin datos: scraping desde Rava
+        if not resultado and es_bono:
+            precio_rava = obtener_precio_bono_rava(ticker_clean)
+            if precio_rava:
+                resultado = {
+                    "Ticker": ticker_clean,
+                    "Fuente": "Rava Bursátil",
+                    "Actual": precio_rava,
+                    "Mínimo": None,
+                    "Máximo": None,
+                    "% Subida a Máx": None,
+                    "Advertencia": "⚠️ Solo precio disponible, sin métricas fundamentales",
+                    "Tipo": "Bono"
+                }
 
         info_fundamental = obtener_info_fundamental(ticker_clean)
 
@@ -308,7 +322,13 @@ if uploaded_file:
     for col in ["Score Final", "Semáforo Riesgo"]:
         if col in columnas:
             columnas.insert(0, columnas.pop(columnas.index(col)))
+
+    for extra_col in ["Tipo", "Advertencia"]:
+        if extra_col in columnas and extra_col not in columnas:
+            columnas.append(extra_col)
+
     df_result = df_result[columnas]
+    df_result["Advertencia"] = df_result.get("Advertencia", "").fillna("")
 
     df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
@@ -321,7 +341,6 @@ if uploaded_file:
         return f"background-color: {color}; font-weight: bold"
 
     styled_df = df_result.style.applymap(resaltar_riesgo, subset=["Semáforo Riesgo"])
-
     st.dataframe(styled_df, use_container_width=True)
 
     csv = df_result.to_csv(index=False).encode('utf-8')

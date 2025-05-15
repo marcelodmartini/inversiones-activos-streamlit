@@ -133,7 +133,7 @@ ticker_map = {
 # Función de obtención de info fundamental
 
 def obtener_info_fundamental(ticker):
-    es_bono = es_bono_argentino(ticker)
+    es_bono = es_bono_argentino(ticker_clean)
     resultado = {
         "País": None, "PEG Ratio": None, "P/E Ratio": None, "P/B Ratio": None,
         "ROE": None, "ROIC": None, "FCF Yield": None, "Debt/Equity": None,
@@ -306,7 +306,7 @@ if uploaded_file:
         raw_ticker = str(raw_ticker).strip()
         ticker_real = ticker_map.get(raw_ticker.upper(), raw_ticker)
         ticker_clean = raw_ticker.upper()
-        es_bono = es_bono_argentino(ticker)
+        es_bono = es_bono_argentino(ticker_clean)
         resultado = None
 
         if not ES_CLOUD:

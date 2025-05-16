@@ -44,17 +44,22 @@ def es_bono_argentino(ticker):
 def obtener_precio_bono_rava(ticker):
     global errores_conexion
     try:
+        time.sleep(1.5)  # evitar bloqueo por muchas conexiones seguidas
         url = f"https://www.rava.com/perfil/{ticker}/historial"
-        headers = {"User-Agent": "Mozilla/5.0"}
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                          "AppleWebKit/537.36 (KHTML, like Gecko) "
+                          "Chrome/113.0.0.0 Safari/537.36"
+        }
+        time.sleep(1.5)
         r = requests.get(url, headers=headers, timeout=10)
-        if r.status_code != 200:
-            return None
-        if r.status_code == 403 or "Demasiadas solicitudes" in r.text or "Forbidden" in r.text:
-            print(f"[Rava] Acceso denegado para {ticker}")
+        if r.status_code != 200 or "Forbidden" in r.text:
+            errores_conexion.append(f"[Rava] {ticker}: {r.status_code} - Acceso denegado")
             return None
         soup = BeautifulSoup(r.text, 'html.parser')
         tabla = soup.find("table")
         if not tabla:
+            errores_conexion.append(f"[Rava] {ticker}: tabla no encontrada")
             return None
         rows = tabla.find_all("tr")[1:]
         precios = []
@@ -67,6 +72,7 @@ def obtener_precio_bono_rava(ticker):
                 except:
                     continue
         if not precios:
+            errores_conexion.append(f"[Rava] {ticker}: no se extrajo ningún precio")
             return None
         min_price = min(precios)
         max_price = max(precios)

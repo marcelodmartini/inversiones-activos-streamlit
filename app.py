@@ -41,26 +41,77 @@ if not FMP_API_KEY:
 def es_bono_argentino(ticker):
     return bool(re.match(r"^(AL|GD|TX|TV|AE|TB)[0-9]+[D]?$", ticker.upper()))
 
+# FUNCIONES IAMC/BYMA ------------------------
+def obtener_precio_bono_iamc(ticker):
+    # Esta función simula lectura desde un archivo CSV descargado manualmente de IAMC
+    # Podés automatizar esto con pandas.read_csv desde un path local o remoto
+    try:
+        iamc_path = "./iamc_cotizaciones.csv"  # debe existir con columnas: 'Ticker', 'Precio'
+        df = pd.read_csv(iamc_path)
+        row = df[df['Ticker'].str.upper() == ticker.upper()]
+        if row.empty:
+            return None
+        current_price = float(row.iloc[0]['Precio'])
+        return {
+            "Ticker": ticker,
+            "Actual": round(current_price, 2),
+            "Fuente": "IAMC (archivo local)"
+        }
+    except Exception as e:
+        errores_conexion.append(f"[IAMC] {ticker}: {e}")
+        print(f"[ERROR] IAMC falló para {ticker} - {e}")
+        return None
+
+def obtener_precio_bono_byma(ticker):
+    try:
+        url = f"https://www.byma.com.ar/mercado/cotizaciones"
+        headers = {"User-Agent": "Mozilla/5.0"}
+        r = requests.get(url, headers=headers, timeout=10)
+        if r.status_code != 200:
+            errores_conexion.append(f"[BYMA] {ticker}: status {r.status_code}")
+            return None
+        soup = BeautifulSoup(r.text, "html.parser")
+        tablas = soup.find_all("table")
+        for tabla in tablas:
+            if ticker.upper() in tabla.text.upper():
+                rows = tabla.find_all("tr")
+                for row in rows:
+                    if ticker.upper() in row.text.upper():
+                        cols = row.find_all("td")
+                        if len(cols) >= 2:
+                            try:
+                                precio = float(cols[1].text.strip().replace("$", "").replace(",", "."))
+                                return {
+                                    "Ticker": ticker,
+                                    "Actual": round(precio, 2),
+                                    "Fuente": "BYMA (scraping web)"
+                                }
+                            except:
+                                continue
+        errores_conexion.append(f"[BYMA] {ticker}: no se encontró en tablas")
+        return None
+    except Exception as e:
+        errores_conexion.append(f"[BYMA] {ticker}: {e}")
+        print(f"[ERROR] BYMA falló para {ticker} - {e}")
+        return None
+
 def obtener_precio_bono_rava(ticker):
     global errores_conexion
     try:
-        time.sleep(1.5)  # evitar bloqueo por muchas conexiones seguidas
+        t.sleep(1.5)
         url = f"https://www.rava.com/perfil/{ticker}/historial"
         headers = {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-                          "AppleWebKit/537.36 (KHTML, like Gecko) "
-                          "Chrome/113.0.0.0 Safari/537.36"
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/113.0.0.0"
         }
-        time.sleep(1.5)
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200 or "Forbidden" in r.text:
             errores_conexion.append(f"[Rava] {ticker}: {r.status_code} - Acceso denegado")
-            return None
+            return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
         soup = BeautifulSoup(r.text, 'html.parser')
         tabla = soup.find("table")
         if not tabla:
             errores_conexion.append(f"[Rava] {ticker}: tabla no encontrada")
-            return None
+            return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
         rows = tabla.find_all("tr")[1:]
         precios = []
         for row in rows:
@@ -73,7 +124,7 @@ def obtener_precio_bono_rava(ticker):
                     continue
         if not precios:
             errores_conexion.append(f"[Rava] {ticker}: no se extrajo ningún precio")
-            return None
+            return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
         min_price = min(precios)
         max_price = max(precios)
         current_price = precios[-1]
@@ -89,9 +140,8 @@ def obtener_precio_bono_rava(ticker):
     except Exception as e:
         errores_conexion.append(f"[Rava] {ticker}: {e}")
         print(f"[ERROR] Rava falló para {ticker} - {e}")
-        warnings.warn(f"DEBUG: Rava falló para {ticker} - {e}")
         st.text(f"DEBUG: Rava falló para {ticker} - {e}")
-
+        return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
 
 
 # Función de cálculo de score

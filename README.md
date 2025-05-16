@@ -151,48 +151,100 @@ Podés expandir el modelo para incluir:
 ---
 Hecho con ❤️ y múltiples APIs por [marcelodmartini]
 
-# Análisis de Activos Financieros con Fallback Inteligente
+# README.md
 
-Este proyecto permite analizar acciones, bonos y criptomonedas utilizando múltiples fuentes de datos como Yahoo Finance, Alpha Vantage, CoinGecko, InvestPy y Rava Bursátil, con un sistema de fallback inteligente y cálculo de indicadores financieros clave.
+# 📊 Análisis de Activos Financieros con Múltiples Fuentes (Streamlit)
 
-## Características
+Este proyecto permite analizar acciones, bonos y criptomonedas desde distintas fuentes financieras, utilizando Streamlit como interfaz. Ofrece métricas fundamentales, precios históricos y un sistema de puntuación automatizado.
 
-- ✅ Carga de tickers desde archivo CSV
-- ✅ Soporte extendido para acciones, bonos y criptomonedas
-- ✅ Fallback automático entre múltiples fuentes
-- ✅ Análisis fundamental con score de inversión del 1 al 5
-- ✅ Detección automática de bonos por ticker
-- ✅ Traducción automática de contexto empresarial
-- ✅ Visualización con gráfico de barras horizontal
-- ✅ Scraping de precios desde Rava si no hay datos en APIs
-- ✅ Exportación de resultados a CSV
+---
 
-## Requisitos
+## 📁 Estructura del Proyecto
 
-- Python 3.8+
-- Archivo CSV con una columna llamada `Ticker`
+```
+/finanzas_app
+├── main_app.py                  # App principal Streamlit
+├── config.py                    # API keys y configuración
+├── requirements.txt             # Dependencias del proyecto
+└── helpers/                     # Código modular por fuente
+    ├── utils.py                 # Utilidades generales, regex, mapeos
+    ├── score.py                 # Cálculo del puntaje financiero
+    ├── yahoo.py                 # Datos históricos desde Yahoo Finance
+    ├── alphavantage.py          # Datos desde Alpha Vantage API
+    ├── coingecko.py             # Precios de criptomonedas (CoinGecko)
+    ├── investpy_utils.py        # (pendiente si se requiere)
+    ├── byma.py                  # Scraping de cotizaciones desde BYMA
+    ├── iamc.py                  # Lectura de archivos IAMC locales
+    ├── rava.py                  # Scraping desde Rava para bonos
+    └── fundamentales.py         # Métricas fundamentales desde yfinance, Finnhub y FMP
+```
 
-## Uso
+---
 
-1. Instalar dependencias:
-   ```
-   pip install -r requirements.txt
-   ```
+## 🔧 Instalación
 
-2. Ejecutar la aplicación:
-   ```
-   streamlit run app.py
-   ```
+```bash
+git clone https://github.com/tuusuario/finanzas_app.git
+cd finanzas_app
+python -m venv venv
+source venv/bin/activate  # En Windows: venv\Scripts\activate
+pip install -r requirements.txt
+```
 
-3. Subir tu archivo CSV y visualizar los resultados directamente desde la interfaz web.
+---
 
-## API Keys necesarias (colocar en `.streamlit/secrets.toml`):
+## 🚀 Ejecución
 
+```bash
+streamlit run main_app.py
+```
+
+Subí un archivo `.csv` con una columna `Ticker`, por ejemplo:
+```
+Ticker
+AAPL
+BTC
+AL30D
+TGSU2
+```
+
+---
+
+## 📡 Fuentes de Datos
+
+- 📈 **Yahoo Finance**: precios históricos y métricas básicas.
+- 🔑 **Alpha Vantage**: precios ajustados (requiere API key).
+- 💰 **CoinGecko**: precios de criptomonedas (gratis).
+- 📊 **Finnhub**: métricas clave (requiere API key).
+- 🧾 **Financial Modeling Prep (FMP)**: ratios financieros (requiere API key).
+- 🧠 **Deep Translator**: para traducir resúmenes de negocios.
+- 📎 **BYMA / IAMC / Rava**: scraping de bonos argentinos.
+
+---
+
+## 🧠 Puntuación Inteligente
+
+Cada activo recibe una calificación del 1 al 5 basada en:
+- Beta
+- Deuda/Equidad
+- ROE / ROIC
+- EV/EBITDA
+- Yield de flujo libre
+- Ratio PEG / PER / PBR
+- Dividend Yield
+
+---
+
+## 📌 Notas
+
+- Para usar Alpha Vantage, Finnhub y FMP debes definir las claves API en `.streamlit/secrets.toml`:
 ```toml
 ALPHA_VANTAGE_API_KEY = "tu_api_key"
 FINNHUB_API_KEY = "tu_api_key"
 FMP_API_KEY = "tu_api_key"
 ```
+
+---
 
 ## Créditos
 

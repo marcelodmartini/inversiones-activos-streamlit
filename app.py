@@ -467,3 +467,4 @@ if uploaded_file:
 
     csv = df_result.to_csv(index=False).encode('utf-8')
     st.download_button("Descargar resultados en CSV", data=csv, file_name="analisis_completo_activos.csv")
+

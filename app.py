@@ -11,6 +11,7 @@ from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 import re
 import warnings
+from datetime import datetime, time
 
 st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
 st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, AL30D, etc.)")
@@ -249,9 +250,14 @@ def analizar_con_alphavantage(ticker):
     global errores_conexion
     try:
         ts = TimeSeries(key=ALPHA_VANTAGE_API_KEY, output_format='pandas')
+
+        fecha_inicio_dt = datetime.combine(fecha_inicio, time.min)
+        fecha_fin_dt = datetime.combine(fecha_fin, time.min)
+
         data, meta = ts.get_daily_adjusted(symbol=ticker, outputsize='full')
         data = data.sort_index()
-        data = data[(data.index >= pd.to_datetime(fecha_inicio)) & (data.index <= pd.to_datetime(fecha_fin))]
+        data = data[(data.index >= pd.to_datetime(fecha_inicio_dt)) & (data.index <= pd.to_datetime(fecha_fin_dt))]
+
         if data.empty:
             return None
         min_price = data['4. close'].min()
@@ -273,10 +279,15 @@ def analizar_con_alphavantage(ticker):
 def analizar_con_coingecko(coin_id):
     global errores_conexion
     try:
+        # Convertir fecha_inicio y fecha_fin de date a datetime (para usar .timestamp)
+        fecha_inicio_dt = datetime.combine(fecha_inicio, time.min)
+        fecha_fin_dt = datetime.combine(fecha_fin, time.min)
+
         data = cg.get_coin_market_chart_range_by_id(
-            id=coin_id, vs_currency='usd',
-            from_timestamp=int(fecha_inicio.timestamp()),
-            to_timestamp=int(fecha_fin.timestamp())
+            id=coin_id,
+            vs_currency='usd',
+            from_timestamp=int(fecha_inicio_dt.timestamp()),
+            to_timestamp=int(fecha_fin_dt.timestamp())
         )
         prices = [p[1] for p in data['prices']]
         if not prices:
@@ -286,9 +297,12 @@ def analizar_con_coingecko(coin_id):
         current_price = prices[-1]
         subida = (max_price - current_price) / current_price * 100
         return {
-            "Ticker": coin_id, "Fuente": "CoinGecko",
-            "Mínimo": round(min_price, 2), "Máximo": round(max_price, 2),
-            "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
+            "Ticker": coin_id,
+            "Fuente": "CoinGecko",
+            "Mínimo": round(min_price, 2),
+            "Máximo": round(max_price, 2),
+            "Actual": round(current_price, 2),
+            "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
         errores_conexion.append(f"[CoinGecko] {coin_id}: {e}")
@@ -297,13 +311,18 @@ def analizar_con_coingecko(coin_id):
         st.text(f"DEBUG: CoinGecko falló para {coin_id} - {e}")
 
 
+
 def analizar_con_investpy(nombre, pais):
     global errores_conexion
     try:
+        fecha_inicio_dt = datetime.combine(fecha_inicio, time.min)
+        fecha_fin_dt = datetime.combine(fecha_fin, time.min)
+
         df = investpy.get_stock_historical_data(
-            stock=nombre, country=pais,
-            from_date=fecha_inicio.strftime('%d/%m/%Y'),
-            to_date=fecha_fin.strftime('%d/%m/%Y')
+            stock=nombre,
+            country=pais,
+            from_date=fecha_inicio_dt.strftime('%d/%m/%Y'),
+            to_date=fecha_fin_dt.strftime('%d/%m/%Y')
         )
         min_price = df['Close'].min()
         max_price = df['Close'].max()
@@ -319,6 +338,7 @@ def analizar_con_investpy(nombre, pais):
         print(f"[ERROR] Investpy falló para {nombre} - {e}")
         warnings.warn(f"DEBUG: Investpy falló para {nombre} - {e}")
         st.text(f"DEBUG: Investpy falló para {nombre} - {e}")
+
 
 
 

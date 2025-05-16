@@ -10,6 +10,7 @@ import requests
 from bs4 import BeautifulSoup
 from deep_translator import GoogleTranslator
 import re
+import warnings
 
 st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
 st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, AL30D, etc.)")
@@ -28,10 +29,19 @@ ALPHA_VANTAGE_API_KEY = st.secrets.get("ALPHA_VANTAGE_API_KEY", "")
 FINNHUB_API_KEY = st.secrets.get("FINNHUB_API_KEY", "")
 FMP_API_KEY = st.secrets.get("FMP_API_KEY", "")
 
+if not ALPHA_VANTAGE_API_KEY:
+    st.warning("⚠️ No se encontró la clave de Alpha Vantage en `st.secrets`.")
+if not FINNHUB_API_KEY:
+    st.warning("⚠️ No se encontró la clave de Finnhub en `st.secrets`.")
+if not FMP_API_KEY:
+    st.warning("⚠️ No se encontró la clave de FMP en `st.secrets`.")
+
+
 def es_bono_argentino(ticker):
     return bool(re.match(r"^(AL|GD|TX|TV|AE|TB)[0-9]+[D]?$", ticker.upper()))
 
 def obtener_precio_bono_rava(ticker):
+    global errores_conexion
     try:
         url = f"https://www.rava.com/perfil/{ticker}/historial"
         headers = {"User-Agent": "Mozilla/5.0"}
@@ -70,8 +80,11 @@ def obtener_precio_bono_rava(ticker):
             "Fuente": "Rava Bursátil (Historial)"
         }
     except Exception as e:
-        print(f"[Rava Historial] Error con {ticker}: {e}")
-        return None
+        errores_conexion.append(f"[Rava] {ticker}: {e}")
+        print(f"[ERROR] Rava falló para {ticker} - {e}")
+        warnings.warn(f"DEBUG: Rava falló para {ticker} - {e}")
+        st.text(f"DEBUG: Rava falló para {ticker} - {e}")
+
 
 
 # Función de cálculo de score
@@ -128,7 +141,7 @@ ticker_map = {
 # Función de obtención de info fundamental
 
 def obtener_info_fundamental(ticker):
-    es_bono = es_bono_argentino(ticker_clean)
+    es_bono = es_bono_argentino(ticker)
     resultado = {
         "País": None, "PEG Ratio": None, "P/E Ratio": None, "P/B Ratio": None,
         "ROE": None, "ROIC": None, "FCF Yield": None, "Debt/Equity": None,
@@ -210,6 +223,7 @@ def obtener_info_fundamental(ticker):
     return resultado
 
 def analizar_con_yfinance(ticker):
+    global errores_conexion
     try:
         data = yf.Ticker(ticker)
         hist = data.history(start=fecha_inicio, end=fecha_fin)
@@ -225,10 +239,14 @@ def analizar_con_yfinance(ticker):
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        print(f"[Yahoo Finance] Error con {ticker}: {e}")
-        return None
+        errores_conexion.append(f"[Yahoo Finance] {ticker}: {e}")
+        print(f"[ERROR] Yahoo Finance falló para {ticker} - {e}")
+        warnings.warn(f"DEBUG: Yahoo Finance falló para {ticker} - {e}")
+        st.text(f"DEBUG: Yahoo Finance falló para {ticker} - {e}")
+
 
 def analizar_con_alphavantage(ticker):
+    global errores_conexion
     try:
         ts = TimeSeries(key=ALPHA_VANTAGE_API_KEY, output_format='pandas')
         data, meta = ts.get_daily_adjusted(symbol=ticker, outputsize='full')
@@ -246,10 +264,14 @@ def analizar_con_alphavantage(ticker):
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        print(f"[AlphaVantage] Error con {ticker}: {e}")
-        return None
+        errores_conexion.append(f"[Alpha Vantage] {ticker}: {e}")
+        print(f"[ERROR] Alpha Vantage falló para {ticker} - {e}")
+        warnings.warn(f"DEBUG: Alpha Vantage falló para {ticker} - {e}")
+        st.text(f"DEBUG: Alpha Vantage falló para {ticker} - {e}")
+
 
 def analizar_con_coingecko(coin_id):
+    global errores_conexion
     try:
         data = cg.get_coin_market_chart_range_by_id(
             id=coin_id, vs_currency='usd',
@@ -269,10 +291,14 @@ def analizar_con_coingecko(coin_id):
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        print(f"[CoinGecko] Error con {coin_id}: {e}")
-        return None
+        errores_conexion.append(f"[CoinGecko] {coin_id}: {e}")
+        print(f"[ERROR] CoinGecko falló para {coin_id} - {e}")
+        warnings.warn(f"DEBUG: CoinGecko falló para {coin_id} - {e}")
+        st.text(f"DEBUG: CoinGecko falló para {coin_id} - {e}")
+
 
 def analizar_con_investpy(nombre, pais):
+    global errores_conexion
     try:
         df = investpy.get_stock_historical_data(
             stock=nombre, country=pais,
@@ -289,16 +315,27 @@ def analizar_con_investpy(nombre, pais):
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        print(f"[Investpy] Error con {nombre}: {e}")
-        return None
+        errores_conexion.append(f"[Investpy] {nombre}: {e}")
+        print(f"[ERROR] Investpy falló para {nombre} - {e}")
+        warnings.warn(f"DEBUG: Investpy falló para {nombre} - {e}")
+        st.text(f"DEBUG: Investpy falló para {nombre} - {e}")
 
+
+
+errores_conexion = []
 if uploaded_file:
     df_input = pd.read_csv(uploaded_file)
+    if 'Ticker' not in df_input.columns:
+        st.error("El archivo CSV debe contener una columna llamada 'Ticker'")
+        st.stop()
+
     resultados = []
     criptos_disponibles = [c['id'] for c in cg.get_coins_list()]
 
-    errores_conexion = []
+    with st.spinner("Analizando activos..."):
     for raw_ticker in df_input['Ticker']:
+        if pd.isna(raw_ticker) or str(raw_ticker).strip() == "":
+            continue
         fuentes_probadas = []
         print(f"\n🔎 Analizando: {raw_ticker}")
         raw_ticker = str(raw_ticker).strip()
@@ -331,8 +368,9 @@ if uploaded_file:
                 fuentes_probadas.append("CoinGecko")
                 resultado = analizar_con_coingecko(raw_ticker.lower())
             except Exception as e:
-                errores_conexion.append(f"[CoinGecko] {ticker_clean}: {e}")
-                print(f"[ERROR] CoinGecko falló para {ticker_clean} - {e}")
+                errores_conexion.append(f"[CoinGecko] {raw_ticker.lower()}: {e}")
+                print(f"[ERROR] CoinGecko falló para {raw_ticker.lower()} - {e}")
+                st.text(f"DEBUG: CoinGecko falló para {raw_ticker.lower()} - {e}")
 
         if not resultado:
             try:
@@ -356,6 +394,9 @@ if uploaded_file:
             except Exception as e:
                 errores_conexion.append(f"[Rava] {ticker_clean}: {e}")
                 print(f"[ERROR] Rava falló para {ticker_clean} - {e}")
+                warnings.warn(f"DEBUG: Rava falló para {ticker_clean} - {e}")
+                st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")
+
 
         if resultado:
             resultado["Fuente"] = resultado.get("Fuente", "No informada")
@@ -368,7 +409,9 @@ if uploaded_file:
         info_fundamental = obtener_info_fundamental(ticker_clean)
 
         if resultado:
-            resultado.update({k: v for k, v in info_fundamental.items() if k not in resultado or resultado[k] is None})
+            for k, v in info_fundamental.items():
+                if k not in ["Tipo", "Fuente", "Advertencia", "Error"] and (k not in resultado or resultado[k] is None):
+                    resultado[k] = v
         else:
             resultado = info_fundamental
             resultado["Ticker"] = raw_ticker
@@ -388,7 +431,7 @@ if uploaded_file:
         if col in columnas:
             columnas.insert(0, columnas.pop(columnas.index(col)))
 
-    for extra_col in ["Tipo", "Advertencia"]:
+    for extra_col in ["Tipo", "Advertencia", "Error", "Fuente", "Fuentes Probadas"]:
         if extra_col in columnas and extra_col not in columnas:
             columnas.append(extra_col)
 
@@ -416,9 +459,10 @@ if uploaded_file:
     st.dataframe(styled_df, use_container_width=True)
 
     if errores_conexion:
-    st.warning("⚠️ Errores de conexión detectados:")
-    for err in errores_conexion:
-        st.text(err)
+        st.warning("⚠️ Errores de conexión detectados:")
+        for err in errores_conexion:
+            st.text(err)
+
 
 
     csv = df_result.to_csv(index=False).encode('utf-8')

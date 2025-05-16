@@ -297,7 +297,10 @@ if uploaded_file:
     resultados = []
     criptos_disponibles = [c['id'] for c in cg.get_coins_list()]
 
+    errores_conexion = []
     for raw_ticker in df_input['Ticker']:
+        fuentes_probadas = []
+        print(f"\n🔎 Analizando: {raw_ticker}")
         raw_ticker = str(raw_ticker).strip()
         ticker_real = ticker_map.get(raw_ticker.upper(), raw_ticker)
         ticker_clean = raw_ticker.upper()
@@ -305,23 +308,62 @@ if uploaded_file:
         resultado = None
 
         if not ES_CLOUD:
-            resultado = analizar_con_yfinance(ticker_real)
+            try:
+                print(f"[INFO] Intentando con Yahoo Finance: {ticker_real}")
+                fuentes_probadas.append("Yahoo Finance")
+                resultado = analizar_con_yfinance(ticker_real)
+            except Exception as e:
+                errores_conexion.append(f"[Yahoo Finance] {ticker_clean}: {e}")
+                print(f"[ERROR] Yahoo Finance falló para {ticker_clean} - {e}")
+
         if not resultado and ALPHA_VANTAGE_API_KEY and not ES_CLOUD:
-            resultado = analizar_con_alphavantage(ticker_clean)
+            try:
+                print(f"[INFO] Intentando con Alpha Vantage: {ticker_clean}")
+                fuentes_probadas.append("Alpha Vantage")
+                resultado = analizar_con_alphavantage(ticker_clean)
+            except Exception as e:
+                errores_conexion.append(f"[Alpha Vantage] {ticker_clean}: {e}")
+                print(f"[ERROR] Alpha Vantage falló para {ticker_clean} - {e}")
+
         if not resultado and raw_ticker.lower() in criptos_disponibles:
-            resultado = analizar_con_coingecko(raw_ticker.lower())
+            try:
+                print(f"[INFO] Intentando con CoinGecko: {raw_ticker.lower()}")
+                fuentes_probadas.append("CoinGecko")
+                resultado = analizar_con_coingecko(raw_ticker.lower())
+            except Exception as e:
+                errores_conexion.append(f"[CoinGecko] {ticker_clean}: {e}")
+                print(f"[ERROR] CoinGecko falló para {ticker_clean} - {e}")
+
         if not resultado:
-            pais = pais_por_ticker.get(raw_ticker.upper(), 'brazil')
-            resultado = analizar_con_investpy(ticker_clean, pais)
+            try:
+                pais = pais_por_ticker.get(raw_ticker.upper(), 'brazil')
+                print(f"[INFO] Intentando con Investpy ({pais}): {ticker_clean}")
+                fuentes_probadas.append(f"Investpy ({pais})")
+                resultado = analizar_con_investpy(ticker_clean, pais)
+            except Exception as e:
+                errores_conexion.append(f"[Investpy] {ticker_clean}: {e}")
+                print(f"[ERROR] Investpy falló para {ticker_clean} - {e}")
 
-        # Fallback adicional para bonos sin datos: scraping desde Rava
         if not resultado and es_bono:
-            precio_rava = obtener_precio_bono_rava(ticker_clean)
-            if precio_rava:
-                resultado = precio_rava
-                resultado["Tipo"] = "Bono"
-                resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
+            try:
+                print(f"[INFO] Intentando scraping Rava para bono: {ticker_clean}")
+                fuentes_probadas.append("Rava")
+                precio_rava = obtener_precio_bono_rava(ticker_clean)
+                if precio_rava:
+                    resultado = precio_rava
+                    resultado["Tipo"] = "Bono"
+                    resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
+            except Exception as e:
+                errores_conexion.append(f"[Rava] {ticker_clean}: {e}")
+                print(f"[ERROR] Rava falló para {ticker_clean} - {e}")
 
+        if resultado:
+            resultado["Fuente"] = resultado.get("Fuente", "No informada")
+            resultado["Fuentes Probadas"] = ", ".join(fuentes_probadas)
+        else:
+            resultado = {"Ticker": raw_ticker, "Error": "❌ No se encontró información en ninguna fuente",
+                         "Fuente": "Ninguna", "Fuentes Probadas": ", ".join(fuentes_probadas),
+                         "Advertencia": "⚠️ No se encontró información", "Tipo": "Desconocido"}
 
         info_fundamental = obtener_info_fundamental(ticker_clean)
 
@@ -372,6 +414,12 @@ if uploaded_file:
 
     styled_df = df_result.style.applymap(resaltar_riesgo, subset=["Semáforo Riesgo"])
     st.dataframe(styled_df, use_container_width=True)
+
+    if errores_conexion:
+    st.warning("⚠️ Errores de conexión detectados:")
+    for err in errores_conexion:
+        st.text(err)
+
 
     csv = df_result.to_csv(index=False).encode('utf-8')
     st.download_button("Descargar resultados en CSV", data=csv, file_name="analisis_completo_activos.csv")

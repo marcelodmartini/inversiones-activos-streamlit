@@ -192,6 +192,8 @@ if uploaded_file:
                 if isinstance(v, (int, float)) and k not in ['Mínimo', 'Máximo', 'Actual', '% Subida a Máx']
             })
 
+    df_result_sin_hist = df_result.drop(columns=["Hist"], errors="ignore")
+    styled_df = df_result_sin_hist.style.map(resaltar_riesgo, subset=["Semáforo Riesgo"])
     st.dataframe(styled_df, use_container_width=True)
 
     if errores_conexion:

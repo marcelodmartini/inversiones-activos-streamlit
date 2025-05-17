@@ -13,6 +13,8 @@ from helpers.investpy_utils import analizar_con_investpy
 from helpers.fundamentales import obtener_info_fundamental
 from helpers.score import calcular_score
 from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
+from helpers.byma import obtener_precio_bono_byma
+
 
 # Título y fecha
 st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
@@ -90,8 +92,22 @@ if uploaded_file:
 
             if not resultado and es_bono:
                 try:
-                    print(f"[INFO] Intentando scraping Rava para bono: {ticker_clean}")
-                    st.text(f"[INFO] Intentando scraping Rava para bono: {ticker_clean}")
+                    print(f"[INFO] Intentando BYMA Open Data para bono: {ticker_clean}")
+                    st.text(f"[INFO] Intentando BYMA Open Data para bono: {ticker_clean}")
+                    fuentes_probadas.append("BYMA Open Data")
+                    precio_byma = obtener_precio_bono_byma(ticker_clean)
+                    if precio_byma:
+                        resultado = precio_byma
+                        resultado["Tipo"] = "Bono"
+                        resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
+                except Exception as e:
+                    errores_conexion.append(f"[BYMA] {ticker_clean}: {e}")
+                    print(f"[ERROR] BYMA falló para {ticker_clean} - {e}")
+
+            if not resultado:
+                try:
+                    print(f"[INFO] Fallback: Rava para bono: {ticker_clean}")
+                    st.text(f"[INFO] Fallback: Rava para bono: {ticker_clean}")
                     fuentes_probadas.append("Rava")
                     precio_rava = obtener_precio_bono_rava(ticker_clean)
                     if precio_rava:
@@ -102,6 +118,7 @@ if uploaded_file:
                     errores_conexion.append(f"[Rava] {ticker_clean}: {e}")
                     print(f"[ERROR] Rava falló para {ticker_clean} - {e}")
                     st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")
+
 
             if resultado:
                 resultado["Fuente"] = resultado.get("Fuente", "No informada")

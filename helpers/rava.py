@@ -3,9 +3,7 @@
 import time
 import requests
 from bs4 import BeautifulSoup
-import pandas as pd
 from helpers.iamc import obtener_precio_bono_iamc
-from helpers.byma import obtener_precio_bono_byma
 
 def obtener_precio_bono_rava(ticker):
     try:
@@ -15,18 +13,21 @@ def obtener_precio_bono_rava(ticker):
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/113.0.0.0"
         }
         r = requests.get(url, headers=headers, timeout=10)
+
         if r.status_code != 200 or "Forbidden" in r.text:
             print(f"[Rava] {ticker}: {r.status_code} - Acceso denegado")
-            return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
+            return obtener_precio_bono_iamc(ticker)
 
         soup = BeautifulSoup(r.text, 'html.parser')
         tabla = soup.find("table")
+
         if not tabla:
             print(f"[Rava] {ticker}: tabla no encontrada")
-            return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
+            return obtener_precio_bono_iamc(ticker)
 
         rows = tabla.find_all("tr")[1:]
         precios = []
+
         for row in rows:
             cols = row.find_all("td")
             if len(cols) >= 5:
@@ -38,7 +39,7 @@ def obtener_precio_bono_rava(ticker):
 
         if not precios:
             print(f"[Rava] {ticker}: no se extrajo ningún precio")
-            return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
+            return obtener_precio_bono_iamc(ticker)
 
         min_price = min(precios)
         max_price = max(precios)
@@ -46,7 +47,7 @@ def obtener_precio_bono_rava(ticker):
         subida = (max_price - current_price) / current_price * 100
 
         return {
-            "Ticker": ticker,
+            "Ticker": ticker.upper(),
             "Actual": round(current_price, 2),
             "Mínimo": round(min_price, 2),
             "Máximo": round(max_price, 2),
@@ -56,4 +57,4 @@ def obtener_precio_bono_rava(ticker):
 
     except Exception as e:
         print(f"[ERROR] Rava falló para {ticker} - {e}")
-        return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
+        return obtener_precio_bono_iamc(ticker)

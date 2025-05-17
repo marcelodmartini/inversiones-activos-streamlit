@@ -52,7 +52,7 @@ def obtener_precio_bono_rava(ticker):
             "Mínimo": round(min_price, 2),
             "Máximo": round(max_price, 2),
             "% Subida a Máx": round(subida, 2),
-            "df": hist  # 👉 agregado para el gráfico histórico
+            "Hist": hist  # 👉 agregado para el gráfico histórico
         }
 
     except Exception as e:

@@ -27,7 +27,7 @@ def analizar_con_alphavantage(ticker, fecha_inicio, fecha_fin):
             "Ticker": ticker, "Fuente": "Alpha Vantage",
             "Mínimo": round(min_price, 2), "Máximo": round(max_price, 2),
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2),
-            "df": hist  # 👉 agregado para el gráfico histórico
+            "Hist": hist  # 👉 agregado para el gráfico histórico
         }
     except Exception as e:
         print(f"[Alpha Vantage] {ticker}: {e}")

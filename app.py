@@ -4,7 +4,7 @@ from datetime import datetime
 from pycoingecko import CoinGeckoAPI
 
 # Importaciones de módulos helpers
-from helpers.utils import ticker_map, pais_por_ticker, es_bono_argentino
+from helpers.score import ticker_map, pais_por_ticker, es_bono_argentino
 from helpers.yahoo import analizar_con_yfinance
 from helpers.alphavantage import analizar_con_alphavantage
 from helpers.coingecko import analizar_con_coingecko

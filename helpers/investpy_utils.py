@@ -1,5 +1,7 @@
 import investpy
 from datetime import datetime, time
+import warnings
+
 
 def analizar_con_investpy(nombre, pais, fecha_inicio, fecha_fin):
     global errores_conexion

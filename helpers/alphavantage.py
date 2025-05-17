@@ -2,6 +2,8 @@ from alpha_vantage.timeseries import TimeSeries
 from datetime import datetime, time
 import pandas as pd
 from config import ALPHA_VANTAGE_API_KEY
+import warnings
+
 
 def analizar_con_alphavantage(ticker, fecha_inicio, fecha_fin):
     global errores_conexion

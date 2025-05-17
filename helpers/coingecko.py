@@ -1,5 +1,7 @@
 # helpers/coingecko.py
 from datetime import datetime, time, timedelta
+import warnings
+
 
 def analizar_con_coingecko(coin_id):
     global errores_conexion

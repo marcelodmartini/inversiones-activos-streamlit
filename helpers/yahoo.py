@@ -1,6 +1,8 @@
 import yfinance as yf
 import pandas as pd
 from datetime import datetime, time
+import warnings
+
 
 def analizar_con_yfinance(ticker, fecha_inicio, fecha_fin):
     global errores_conexion

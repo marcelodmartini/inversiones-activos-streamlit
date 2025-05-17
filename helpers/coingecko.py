@@ -36,4 +36,3 @@ def analizar_con_coingecko(coin_id):
         errores_conexion.append(f"[CoinGecko] {coin_id}: {e}")
         print(f"[ERROR] CoinGecko falló para {coin_id} - {e}")
         warnings.warn(f"DEBUG: CoinGecko falló para {coin_id} - {e}")
-        st.text(f"DEBUG: CoinGecko falló para {coin_id} - {e}")

@@ -30,4 +30,3 @@ def analizar_con_alphavantage(ticker, fecha_inicio, fecha_fin):
         errores_conexion.append(f"[Alpha Vantage] {ticker}: {e}")
         print(f"[ERROR] Alpha Vantage falló para {ticker} - {e}")
         warnings.warn(f"DEBUG: Alpha Vantage falló para {ticker} - {e}")
-        st.text(f"DEBUG: Alpha Vantage falló para {ticker} - {e}")

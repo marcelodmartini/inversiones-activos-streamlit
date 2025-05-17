@@ -22,4 +22,3 @@ def analizar_con_yfinance(ticker, fecha_inicio, fecha_fin):
         errores_conexion.append(f"[Yahoo Finance] {ticker}: {e}")
         print(f"[ERROR] Yahoo Finance falló para {ticker} - {e}")
         warnings.warn(f"DEBUG: Yahoo Finance falló para {ticker} - {e}")
-        st.text(f"DEBUG: Yahoo Finance falló para {ticker} - {e}")

@@ -104,20 +104,20 @@ if uploaded_file:
                     errores_conexion.append(f"[BYMA] {ticker_clean}: {e}")
                     print(f"[ERROR] BYMA falló para {ticker_clean} - {e}")
 
-            '''if not resultado:
-                try:
-                    print(f"[INFO] Fallback: Rava para bono: {ticker_clean}")
-                    st.text(f"[INFO] Fallback: Rava para bono: {ticker_clean}")
-                    fuentes_probadas.append("Rava")
-                    precio_rava = obtener_precio_bono_rava(ticker_clean)
-                    if precio_rava:
-                        resultado = precio_rava
-                        resultado["Tipo"] = "Bono"
-                        resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
-                except Exception as e:
-                    errores_conexion.append(f"[Rava] {ticker_clean}: {e}")
-                    print(f"[ERROR] Rava falló para {ticker_clean} - {e}")
-                    st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")'''
+            # if not resultado:
+            #     try:
+            #         print(f"[INFO] Fallback: Rava para bono: {ticker_clean}")
+            #         st.text(f"[INFO] Fallback: Rava para bono: {ticker_clean}")
+            #         fuentes_probadas.append("Rava")
+            #         precio_rava = obtener_precio_bono_rava(ticker_clean)
+            #         if precio_rava:
+            #             resultado = precio_rava
+            #             resultado["Tipo"] = "Bono"
+            #             resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
+            #     except Exception as e:
+            #         errores_conexion.append(f"[Rava] {ticker_clean}: {e}")
+            #         print(f"[ERROR] Rava falló para {ticker_clean} - {e}")
+            #         st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")
 
 
             if resultado:

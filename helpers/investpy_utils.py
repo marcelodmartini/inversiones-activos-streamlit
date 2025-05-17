@@ -26,4 +26,3 @@ def analizar_con_investpy(nombre, pais, fecha_inicio, fecha_fin):
         errores_conexion.append(f"[Investpy] {nombre}: {e}")
         print(f"[ERROR] Investpy falló para {nombre} - {e}")
         warnings.warn(f"DEBUG: Investpy falló para {nombre} - {e}")
-        st.text(f"DEBUG: Investpy falló para {nombre} - {e}")

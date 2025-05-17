@@ -5,11 +5,9 @@ import numpy as np
 
 
 def graficar_precio_historico(nombre, df):
-    if not isinstance(df, pd.DataFrame) or df.empty or 'Close' not in df.columns:
+    if df is None or df.empty or 'Close' not in df.columns:
         st.warning(f"No hay datos de cierre disponibles para {nombre}.")
         return
-    st.line_chart(df.set_index("Fecha")[["Close"]])
-
 
     fig, ax = plt.subplots()
     df['Close'].plot(ax=ax, label='Precio Cierre', linewidth=2)

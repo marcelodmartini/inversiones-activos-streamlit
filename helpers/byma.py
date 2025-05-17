@@ -90,7 +90,7 @@ def obtener_precio_bono_byma(symbol):
             "Máximo": round(max_price, 2),
             "% Subida a Máx": subida,
             "Fuente": "BYMA API privada",
-            "Hist": None
+            "Hist": hist  # 👉 agregado para el gráfico histórico
         }
 
         guardar_cache(symbol, result)

@@ -1,7 +1,8 @@
-# helpers/graficos.py
 import matplotlib.pyplot as plt
 import streamlit as st
 import pandas as pd
+import numpy as np
+
 
 def graficar_precio_historico(nombre, df):
     if df is None or df.empty or 'Close' not in df.columns:
@@ -17,8 +18,11 @@ def graficar_precio_historico(nombre, df):
     ax.legend()
     st.pyplot(fig)
 
+
 def graficar_radar_scores(nombre, scores_dict):
-    import numpy as np
+    if not scores_dict:
+        st.warning(f"No hay métricas suficientes para el radar financiero de {nombre}.")
+        return
 
     labels = list(scores_dict.keys())
     values = list(scores_dict.values())
@@ -38,8 +42,9 @@ def graficar_radar_scores(nombre, scores_dict):
 
     st.pyplot(fig)
 
+
 def graficar_subida_maximo(nombre, actual, maximo):
-    if actual is None or maximo is None:
+    if actual is None or maximo is None or actual == 0:
         return
     subida = (maximo - actual) / actual * 100
     st.metric(label=f"% Subida a Máximo ({nombre})", value=f"{subida:.2f}%")

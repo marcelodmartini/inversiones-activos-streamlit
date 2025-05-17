@@ -23,7 +23,7 @@ def obtener_precio_bono_bymadata(symbol):
             "Mínimo": round(minimo, 2),
             "Máximo": round(maximo, 2),
             "% Subida a Máx": subida,
-            "Fuente": "BYMA Open Data API pública"
+            "df": hist  # 👉 agregado para el gráfico histórico
         }
     except Exception as e:
         print(f"[BYMA API] Error con {symbol}: {e}")

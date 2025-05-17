@@ -22,7 +22,8 @@ def analizar_con_investpy(nombre, pais, fecha_inicio, fecha_fin):
         return {
             "Ticker": nombre, "Fuente": f"Investpy ({pais})",
             "Mínimo": round(min_price, 2), "Máximo": round(max_price, 2),
-            "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
+            "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2),
+            "df": hist  # 👉 agregado para el gráfico histórico
         }
     except Exception as e:
         print(f"[Investpy] {nombre}: {e}")

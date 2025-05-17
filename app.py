@@ -171,18 +171,14 @@ if uploaded_file:
 
     if mostrar_graficos:
         st.subheader("Gráficos por activo")
-
-        for idx, fila in df_result.iterrows():
+        for _, fila in df_result.iterrows():
             st.markdown(f"---\n### {fila['Ticker']}")
-
-            # Gráfico de línea de precios históricos si hay datos
-            graficar_precio_historico(fila)
-
-            # Gráfico de radar con scores si hay puntajes
-            graficar_radar_scores(fila)
-
-            # Métrica simple de % de subida a máximo
-            graficar_subida_maximo(fila)
+            graficar_precio_historico(fila['Ticker'], fila.get('Hist'))
+            graficar_subida_maximo(fila['Ticker'], fila.get('Actual'), fila.get('Máximo'))
+            graficar_radar_scores(fila['Ticker'], {
+                k: v for k, v in fila.items()
+                if isinstance(v, (int, float)) and k not in ['Mínimo', 'Máximo', 'Actual', '% Subida a Máx']
+            })
 
     st.dataframe(styled_df, use_container_width=True)
 

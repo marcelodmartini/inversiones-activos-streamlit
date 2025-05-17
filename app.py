@@ -15,6 +15,14 @@ from helpers.fundamentales import obtener_info_fundamental
 from helpers.score import calcular_score
 from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
 from helpers.byma import obtener_precio_bono_byma
+import subprocess
+import os
+
+PLAYWRIGHT_INSTALLED_FLAG = "/home/adminuser/.cache/ms-playwright/chromium"
+
+if not os.path.exists(PLAYWRIGHT_INSTALLED_FLAG):
+    print("▶ Instalando navegadores de Playwright...")
+    subprocess.run(["playwright", "install", "--with-deps"], check=True)
 
 if "debug_logs" not in st.session_state:
     st.session_state.debug_logs = []

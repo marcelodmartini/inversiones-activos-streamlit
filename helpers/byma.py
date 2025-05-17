@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 
 def obtener_precio_bono_bymadata(symbol):
     """Consulta la API pública BYMA Open Data sin autenticación."""
+    print(f"[BYMA API]")
     try:
         url = f"https://api.bymadata.com.ar/v1/mercados/bonos/{symbol.upper()}"
         headers = {"User-Agent": "Mozilla/5.0"}

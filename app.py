@@ -18,6 +18,7 @@ from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
 st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
 st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, AL30D, etc.)")
 
+
 col1, col2 = st.columns(2)
 with col1:
     fecha_inicio = st.date_input("Fecha de inicio", value=datetime(2010, 1, 1))

@@ -5,6 +5,7 @@ import json
 import os
 import time
 from playwright.sync_api import sync_playwright
+import pandas as pd
 
 CACHE_PATH = "/tmp/byma_cache"
 CACHE_TTL = 600  # segundos (10 minutos)
@@ -52,7 +53,7 @@ def obtener_precio_bono_bymadata(symbol):
             "Máximo": round(maximo, 2),
             "% Subida a Máx": subida,
             "Fuente": "BYMA Open Data",
-            "Hist": hist  # 👉 agregado para el gráfico histórico
+            "Hist": None  # No se provee histórico en esta API
         }
 
         guardar_cache(symbol, result)
@@ -72,14 +73,30 @@ def obtener_precio_bono_playwright(symbol):
             page.goto(f"https://open.bymadata.com.ar/#/technical-detail-bond?symbol={symbol.upper()}&settlementType=2", timeout=30000)
             page.wait_for_selector("text=Precio Último", timeout=10000)
 
-            row = page.locator("//div[contains(text(),'Precio Último')]/following-sibling::div").first
-            precio_texto = row.inner_text().strip().replace("$", "").replace(",", ".")
+            precio_texto = page.locator("//div[contains(text(),'Precio Último')]/following-sibling::div").first.inner_text().strip().replace("$", "").replace(",", ".")
             precio = float(precio_texto)
+
+            # Obtener histórico desde tabla
+            rows = page.locator(".technical-detail__chart-container + div table tr").all()
+            datos = []
+            for row in rows[1:]:
+                cols = row.locator("td").all()
+                if len(cols) >= 2:
+                    fecha = cols[0].inner_text().strip()
+                    cierre = cols[1].inner_text().strip().replace("$", "").replace(",", ".")
+                    try:
+                        datos.append({"Fecha": fecha, "Close": float(cierre)})
+                    except:
+                        continue
+            df_hist = pd.DataFrame(datos)
+            df_hist["Fecha"] = pd.to_datetime(df_hist["Fecha"], dayfirst=True, errors='coerce')
+            df_hist = df_hist.dropna().set_index("Fecha").sort_index()
 
             result = {
                 "Ticker": symbol.upper(),
                 "Actual": round(precio, 2),
-                "Fuente": "BYMA (Playwright Web)"
+                "Fuente": "BYMA (Playwright Web)",
+                "Hist": df_hist.reset_index().to_dict(orient="list") if not df_hist.empty else None
             }
             browser.close()
             return result
@@ -114,7 +131,8 @@ def obtener_precio_bono_scraping(symbol):
                                 return {
                                     "Ticker": symbol.upper(),
                                     "Actual": round(precio, 2),
-                                    "Fuente": "BYMA (scraping web)"
+                                    "Fuente": "BYMA (scraping web)",
+                                    "Hist": hist  # 👉 agregado para el gráfico histórico
                                 }
                             except Exception as e:
                                 print(f"[BYMA Scraping] Error parsing {symbol}: {e}")

@@ -185,7 +185,14 @@ if uploaded_file:
         st.subheader("Gráficos por activo")
         for _, fila in df_result.iterrows():
             st.markdown(f"---\n### {fila['Ticker']}")
-            graficar_precio_historico(fila['Ticker'], fila.get('Hist'))
+
+            hist = fila.get("Hist")
+            if isinstance(hist, dict):
+                hist = pd.DataFrame(hist)
+            elif not isinstance(hist, pd.DataFrame):
+                hist = None  # Evita pasar float u otro tipo no compatible
+
+            graficar_precio_historico(fila['Ticker'], hist)
             graficar_subida_maximo(fila['Ticker'], fila.get('Actual'), fila.get('Máximo'))
             graficar_radar_scores(fila['Ticker'], {
                 k: v for k, v in fila.items()

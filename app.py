@@ -17,10 +17,7 @@ from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
 from helpers.byma import obtener_precio_bono_byma
 import subprocess
 import os
-import shutil
 
-if shutil.which("playwright") is None:
-    st.error("Playwright no está instalado correctamente.")
 
 if "debug_logs" not in st.session_state:
     st.session_state.debug_logs = []
@@ -129,9 +126,6 @@ if uploaded_file:
             #         st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")
 
 
-            score_texto, score_numerico = calcular_score(resultado)
-            resultado["Score Final"] = score_texto
-            resultado["__orden_score"] = score_numerico
             if resultado:
                 resultado["Fuente"] = resultado.get("Fuente", "No informada")
                 resultado["Fuentes Probadas"] = ", ".join(fuentes_probadas)
@@ -155,6 +149,10 @@ if uploaded_file:
                 resultado = info_fundamental
                 resultado["Ticker"] = raw_ticker
                 resultado["Error"] = "No se encontró información en ninguna fuente"
+
+            score_texto, score_numerico = calcular_score(resultado)
+            resultado["Score Final"] = score_texto
+            resultado["__orden_score"] = score_numerico
 
             resultados.append(resultado)
 

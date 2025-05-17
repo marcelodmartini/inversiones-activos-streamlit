@@ -177,6 +177,7 @@ if uploaded_file:
         return f"background-color: {color}; font-weight: bold"
 
     df_result_safe = df_result.drop(columns=["Hist"], errors="ignore")
+
     styled_df = df_result.style.map(resaltar_riesgo, subset=["Semáforo Riesgo"])
 
     # Checkbox para mostrar gráficos
@@ -193,7 +194,7 @@ if uploaded_file:
                 if isinstance(v, (int, float)) and k not in ['Mínimo', 'Máximo', 'Actual', '% Subida a Máx']
             })
 
-    st.dataframe(df_result_safe.style.map(resaltar_riesgo, subset=["Semáforo Riesgo"]), use_container_width=True)
+    st.dataframe(styled_df, use_container_width=True)
 
     if errores_conexion:
         st.warning("⚠️ Errores de conexión detectados:")

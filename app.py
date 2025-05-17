@@ -186,19 +186,12 @@ if uploaded_file:
         st.subheader("Gráficos por activo")
         for _, fila in df_result.iterrows():
             st.markdown(f"---\n### {fila['Ticker']}")
-            hist = fila.get("Hist")
-            if isinstance(hist, dict):
-                hist = pd.DataFrame(hist)
-            if isinstance(hist, pd.DataFrame) and hist.index.name == "Fecha":
-                hist = hist.reset_index()
-
-            graficar_precio_historico(fila['Ticker'], hist)
+            graficar_precio_historico(fila['Ticker'], fila.get('Hist'))
             graficar_subida_maximo(fila['Ticker'], fila.get('Actual'), fila.get('Máximo'))
             graficar_radar_scores(fila['Ticker'], {
                 k: v for k, v in fila.items()
                 if isinstance(v, (int, float)) and k not in ['Mínimo', 'Máximo', 'Actual', '% Subida a Máx']
             })
-
 
     st.dataframe(df_result_safe.style.map(resaltar_riesgo, subset=["Semáforo Riesgo"]), use_container_width=True)
 

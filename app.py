@@ -159,6 +159,13 @@ if uploaded_file:
     df_result = pd.DataFrame(resultados)
     df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
+    # Reordenar columnas con prioridad al principio
+    columnas_prioritarias = ["Semáforo Riesgo", "Cobertura", "Score Final", "% Subida a Máx", "País"]
+    columnas_existentes = [col for col in columnas_prioritarias if col in df_result.columns]
+    columnas_resto = [col for col in df_result.columns if col not in columnas_existentes]
+    df_result = df_result[columnas_existentes + columnas_resto]
+
+
     def resaltar_riesgo(val):
         if not val or not isinstance(val, str):
             return ""

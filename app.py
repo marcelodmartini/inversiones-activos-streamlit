@@ -2,6 +2,7 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 from pycoingecko import CoinGeckoAPI
+from helpers.graficos import graficar_precio_historico, graficar_radar_scores, graficar_subida_maximo
 
 # Importaciones de módulos helpers
 from helpers.score import ticker_map, pais_por_ticker, es_bono_argentino
@@ -164,6 +165,25 @@ if uploaded_file:
         return f"background-color: {color}; font-weight: bold"
 
     styled_df = df_result.style.map(resaltar_riesgo, subset=["Semáforo Riesgo"])
+
+    # Checkbox para mostrar gráficos
+    mostrar_graficos = st.checkbox("📊 Mostrar gráficos individuales por activo analizado")
+
+    if mostrar_graficos:
+        st.subheader("Gráficos por activo")
+
+        for idx, fila in df_result.iterrows():
+            st.markdown(f"---\n### {fila['Ticker']}")
+
+            # Gráfico de línea de precios históricos si hay datos
+            graficar_precio_historico(fila)
+
+            # Gráfico de radar con scores si hay puntajes
+            graficar_radar_scores(fila)
+
+            # Métrica simple de % de subida a máximo
+            graficar_subida_maximo(fila)
+
     st.dataframe(styled_df, use_container_width=True)
 
     if errores_conexion:

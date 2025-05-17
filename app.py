@@ -176,8 +176,6 @@ if uploaded_file:
         }.get(val.upper(), "#eeeeee")
         return f"background-color: {color}; font-weight: bold"
 
-    df_result_safe = df_result.drop(columns=["Hist"], errors="ignore")
-
     styled_df = df_result.style.map(resaltar_riesgo, subset=["Semáforo Riesgo"])
 
     # Checkbox para mostrar gráficos

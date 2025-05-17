@@ -2,18 +2,19 @@ import pandas as pd
 import streamlit as st
 from datetime import datetime
 from pycoingecko import CoinGeckoAPI
-import investpy
-import os
-from alpha_vantage.timeseries import TimeSeries
-import requests
-from bs4 import BeautifulSoup
-from deep_translator import GoogleTranslator
-import re
-import warnings
-from datetime import datetime, time
-from bs4 import BeautifulSoup
-import requests
 
+# Importaciones de módulos helpers
+from helpers.utils import ticker_map, pais_por_ticker, es_bono_argentino
+from helpers.yahoo import analizar_con_yfinance
+from helpers.alphavantage import analizar_con_alphavantage
+from helpers.coingecko import analizar_con_coingecko
+from helpers.rava import obtener_precio_bono_rava
+from helpers.investpy_utils import analizar_con_investpy
+from helpers.fundamentales import obtener_info_fundamental
+from helpers.score import calcular_score
+from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
+
+# Título y fecha
 st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
 st.write("Subí un archivo CSV con una columna llamada 'Ticker' (ej: AAPL, BTC, AL30D, etc.)")
 
@@ -52,7 +53,7 @@ if uploaded_file:
                 try:
                     print(f"[INFO] Intentando con Yahoo Finance: {ticker_real}")
                     fuentes_probadas.append("Yahoo Finance")
-                    resultado = analizar_con_yfinance(ticker_real)
+                    resultado = analizar_con_yfinance(ticker_real, fecha_inicio, fecha_fin)
                 except Exception as e:
                     errores_conexion.append(f"[Yahoo Finance] {ticker_clean}: {e}")
                     print(f"[ERROR] Yahoo Finance falló para {ticker_clean} - {e}")
@@ -61,7 +62,7 @@ if uploaded_file:
                 try:
                     print(f"[INFO] Intentando con Alpha Vantage: {ticker_clean}")
                     fuentes_probadas.append("Alpha Vantage")
-                    resultado = analizar_con_alphavantage(ticker_clean)
+                    resultado = analizar_con_alphavantage(ticker_clean, fecha_inicio, fecha_fin)
                 except Exception as e:
                     errores_conexion.append(f"[Alpha Vantage] {ticker_clean}: {e}")
                     print(f"[ERROR] Alpha Vantage falló para {ticker_clean} - {e}")
@@ -70,7 +71,7 @@ if uploaded_file:
                 try:
                     print(f"[INFO] Intentando con CoinGecko: {raw_ticker.lower()}")
                     fuentes_probadas.append("CoinGecko")
-                    resultado = analizar_con_coingecko(raw_ticker.lower())
+                    resultado = analizar_con_coingecko(cg, raw_ticker.lower(), fecha_inicio, fecha_fin)
                 except Exception as e:
                     errores_conexion.append(f"[CoinGecko] {raw_ticker.lower()}: {e}")
                     print(f"[ERROR] CoinGecko falló para {raw_ticker.lower()} - {e}")
@@ -81,7 +82,7 @@ if uploaded_file:
                     pais = pais_por_ticker.get(raw_ticker.upper(), 'brazil')
                     print(f"[INFO] Intentando con Investpy ({pais}): {ticker_clean}")
                     fuentes_probadas.append(f"Investpy ({pais})")
-                    resultado = analizar_con_investpy(ticker_clean, pais)
+                    resultado = analizar_con_investpy(ticker_clean, pais, fecha_inicio, fecha_fin)
                 except Exception as e:
                     errores_conexion.append(f"[Investpy] {ticker_clean}: {e}")
                     print(f"[ERROR] Investpy falló para {ticker_clean} - {e}")
@@ -98,17 +99,20 @@ if uploaded_file:
                 except Exception as e:
                     errores_conexion.append(f"[Rava] {ticker_clean}: {e}")
                     print(f"[ERROR] Rava falló para {ticker_clean} - {e}")
-                    warnings.warn(f"DEBUG: Rava falló para {ticker_clean} - {e}")
                     st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")
-
 
             if resultado:
                 resultado["Fuente"] = resultado.get("Fuente", "No informada")
                 resultado["Fuentes Probadas"] = ", ".join(fuentes_probadas)
             else:
-                resultado = {"Ticker": raw_ticker, "Error": "❌ No se encontró información en ninguna fuente",
-                            "Fuente": "Ninguna", "Fuentes Probadas": ", ".join(fuentes_probadas),
-                            "Advertencia": "⚠️ No se encontró información", "Tipo": "Desconocido"}
+                resultado = {
+                    "Ticker": raw_ticker,
+                    "Error": "❌ No se encontró información en ninguna fuente",
+                    "Fuente": "Ninguna",
+                    "Fuentes Probadas": ", ".join(fuentes_probadas),
+                    "Advertencia": "⚠️ No se encontró información",
+                    "Tipo": "Desconocido"
+                }
 
             info_fundamental = obtener_info_fundamental(ticker_clean)
 
@@ -121,7 +125,6 @@ if uploaded_file:
                 resultado["Ticker"] = raw_ticker
                 resultado["Error"] = "No se encontró información en ninguna fuente"
 
-
             score_texto, score_numerico = calcular_score(resultado)
             resultado["Score Final"] = score_texto
             resultado["__orden_score"] = score_numerico
@@ -129,23 +132,6 @@ if uploaded_file:
             resultados.append(resultado)
 
     df_result = pd.DataFrame(resultados)
-
-    columnas = df_result.columns.tolist()
-    for col in ["Score Final", "Semáforo Riesgo"]:
-        if col in columnas:
-            columnas.insert(0, columnas.pop(columnas.index(col)))
-
-    for extra_col in ["Tipo", "Advertencia", "Error", "Fuente", "Fuentes Probadas"]:
-        if extra_col in columnas and extra_col not in columnas:
-            columnas.append(extra_col)
-
-    df_result = df_result[columnas]
-    if "Advertencia" not in df_result.columns:
-        df_result["Advertencia"] = ""
-    else:
-        df_result["Advertencia"] = df_result["Advertencia"].fillna("")
-
-
     df_result = df_result.sort_values("__orden_score", ascending=False).drop(columns="__orden_score")
 
     def resaltar_riesgo(val):
@@ -158,7 +144,6 @@ if uploaded_file:
         }.get(val.upper(), "#eeeeee")
         return f"background-color: {color}; font-weight: bold"
 
-
     styled_df = df_result.style.applymap(resaltar_riesgo, subset=["Semáforo Riesgo"])
     st.dataframe(styled_df, use_container_width=True)
 
@@ -167,10 +152,5 @@ if uploaded_file:
         for err in errores_conexion:
             st.text(err)
 
-
-
     csv = df_result.to_csv(index=False).encode('utf-8')
     st.download_button("Descargar resultados en CSV", data=csv, file_name="analisis_completo_activos.csv")
-
-
-

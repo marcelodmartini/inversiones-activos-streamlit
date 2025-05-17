@@ -163,7 +163,7 @@ if uploaded_file:
         }.get(val.upper(), "#eeeeee")
         return f"background-color: {color}; font-weight: bold"
 
-    styled_df = df_result.style.applymap(resaltar_riesgo, subset=["Semáforo Riesgo"])
+    styled_df = df_result.style.map(resaltar_riesgo, subset=["Semáforo Riesgo"])
     st.dataframe(styled_df, use_container_width=True)
 
     if errores_conexion:

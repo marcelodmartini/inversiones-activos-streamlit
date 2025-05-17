@@ -12,7 +12,7 @@ def obtener_precio_bono_rava(ticker):
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/113.0.0.0"
         }
-        r = requests.get(url, headers=headers, timeout=10)
+        r = requests.get(url, headers=headers, timeout=10, verify=False)
 
         if r.status_code != 200 or "Forbidden" in r.text:
             print(f"[Rava] {ticker}: {r.status_code} - Acceso denegado")

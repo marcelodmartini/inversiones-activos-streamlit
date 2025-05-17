@@ -8,7 +8,7 @@ def obtener_precio_bono_bymadata(symbol):
     try:
         url = f"https://api.bymadata.com.ar/v1/mercados/bonos/{symbol.upper()}"
         headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(url, headers=headers, timeout=10)
+        r = requests.get(url, headers=headers, timeout=10, verify=False)
         r.raise_for_status()
         data = r.json()
 
@@ -34,7 +34,7 @@ def obtener_precio_bono_scraping(symbol):
     try:
         url = "https://www.byma.com.ar/mercado/cotizaciones"
         headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(url, headers=headers, timeout=10)
+        r = requests.get(url, headers=headers, timeout=10, verify=False)
 
         if r.status_code != 200:
             print(f"[BYMA Scraping] Error HTTP {r.status_code} para {symbol}")

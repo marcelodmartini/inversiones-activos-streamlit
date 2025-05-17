@@ -26,6 +26,7 @@ def obtener_precio_bono_bymadata(symbol):
         }
     except Exception as e:
         print(f"[BYMA API] Error con {symbol}: {e}")
+        st.text(f"[BYMA API] Error con {symbol}: {e}")
         return None
 
 def obtener_precio_bono_scraping(symbol):
@@ -66,11 +67,13 @@ def obtener_precio_bono_scraping(symbol):
 
     except Exception as e:
         print(f"[BYMA Scraping] Excepción general para {symbol}: {e}")
+        st.text(f"[BYMA Scraping] Excepción general para {symbol}: {e}")
         return None
 
 def obtener_precio_bono_byma(symbol):
     """Consulta con fallback: API pública -> Scraping clásico."""
     print(f"[BYMA] 🔍 Buscando datos para {symbol}")
+    st.text(f"[BYMA] 🔍 Buscando datos para {symbol}")
     resultado = obtener_precio_bono_bymadata(symbol)
     if resultado:
         return resultado

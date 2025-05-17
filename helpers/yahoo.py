@@ -2,7 +2,7 @@ import yfinance as yf
 import pandas as pd
 from datetime import datetime, time
 
-def analizar_con_yfinance(ticker):
+def analizar_con_yfinance(ticker, fecha_inicio, fecha_fin):
     global errores_conexion
     try:
         data = yf.Ticker(ticker)

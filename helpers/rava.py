@@ -1,4 +1,5 @@
 # helpers/rava.py
+
 import time
 import requests
 from bs4 import BeautifulSoup
@@ -7,22 +8,23 @@ from helpers.iamc import obtener_precio_bono_iamc
 from helpers.byma import obtener_precio_bono_byma
 
 def obtener_precio_bono_rava(ticker):
-    global errores_conexion
     try:
-        t.sleep(1.5)
+        time.sleep(1.5)
         url = f"https://www.rava.com/perfil/{ticker}/historial"
         headers = {
             "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Chrome/113.0.0.0"
         }
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200 or "Forbidden" in r.text:
-            errores_conexion.append(f"[Rava] {ticker}: {r.status_code} - Acceso denegado")
+            print(f"[Rava] {ticker}: {r.status_code} - Acceso denegado")
             return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
+
         soup = BeautifulSoup(r.text, 'html.parser')
         tabla = soup.find("table")
         if not tabla:
-            errores_conexion.append(f"[Rava] {ticker}: tabla no encontrada")
+            print(f"[Rava] {ticker}: tabla no encontrada")
             return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
+
         rows = tabla.find_all("tr")[1:]
         precios = []
         for row in rows:
@@ -33,13 +35,16 @@ def obtener_precio_bono_rava(ticker):
                     precios.append(cierre)
                 except:
                     continue
+
         if not precios:
-            errores_conexion.append(f"[Rava] {ticker}: no se extrajo ningún precio")
+            print(f"[Rava] {ticker}: no se extrajo ningún precio")
             return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
+
         min_price = min(precios)
         max_price = max(precios)
         current_price = precios[-1]
         subida = (max_price - current_price) / current_price * 100
+
         return {
             "Ticker": ticker,
             "Actual": round(current_price, 2),
@@ -48,8 +53,7 @@ def obtener_precio_bono_rava(ticker):
             "% Subida a Máx": round(subida, 2),
             "Fuente": "Rava Bursátil (Historial)"
         }
+
     except Exception as e:
-        errores_conexion.append(f"[Rava] {ticker}: {e}")
         print(f"[ERROR] Rava falló para {ticker} - {e}")
-        st.text(f"DEBUG: Rava falló para {ticker} - {e}")
         return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)

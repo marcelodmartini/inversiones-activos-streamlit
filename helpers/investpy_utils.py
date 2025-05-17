@@ -1,7 +1,7 @@
 import investpy
 from datetime import datetime, time
 
-def analizar_con_investpy(nombre, pais):
+def analizar_con_investpy(nombre, pais, fecha_inicio, fecha_fin):
     global errores_conexion
     try:
         fecha_inicio_dt = datetime.combine(fecha_inicio, time.min)

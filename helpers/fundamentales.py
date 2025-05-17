@@ -3,6 +3,8 @@ import yfinance as yf
 import requests
 from deep_translator import GoogleTranslator
 from config import FINNHUB_API_KEY, FMP_API_KEY
+from helpers.utils import es_bono_argentino
+
 
 def obtener_info_fundamental(ticker):
     es_bono = es_bono_argentino(ticker)

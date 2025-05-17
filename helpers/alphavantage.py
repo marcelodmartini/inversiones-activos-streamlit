@@ -3,7 +3,7 @@ from datetime import datetime, time
 import pandas as pd
 from config import ALPHA_VANTAGE_API_KEY
 
-def analizar_con_alphavantage(ticker):
+def analizar_con_alphavantage(ticker, fecha_inicio, fecha_fin):
     global errores_conexion
     try:
         ts = TimeSeries(key=ALPHA_VANTAGE_API_KEY, output_format='pandas')

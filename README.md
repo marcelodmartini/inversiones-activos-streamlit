@@ -172,7 +172,7 @@ Este proyecto permite analizar acciones, bonos y criptomonedas desde distintas f
     ├── yahoo.py                 # Datos históricos desde Yahoo Finance
     ├── alphavantage.py          # Datos desde Alpha Vantage API
     ├── coingecko.py             # Precios de criptomonedas (CoinGecko)
-    ├── investpy_utils.py        # (pendiente si se requiere)
+    ├── investpy                 # (pendiente si se requiere)
     ├── byma.py                  # Scraping de cotizaciones desde BYMA
     ├── iamc.py                  # Lectura de archivos IAMC locales
     ├── rava.py                  # Scraping desde Rava para bonos

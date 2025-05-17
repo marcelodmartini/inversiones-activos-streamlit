@@ -9,7 +9,7 @@ from helpers.yahoo import analizar_con_yfinance
 from helpers.alphavantage import analizar_con_alphavantage
 from helpers.coingecko import analizar_con_coingecko
 from helpers.rava import obtener_precio_bono_rava
-from helpers.investpy import analizar_con_investpy
+from helpers.investpy_utils import analizar_con_investpy
 from helpers.fundamentales import obtener_info_fundamental
 from helpers.score import calcular_score
 from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY

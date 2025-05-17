@@ -104,7 +104,7 @@ if uploaded_file:
                     errores_conexion.append(f"[BYMA] {ticker_clean}: {e}")
                     print(f"[ERROR] BYMA falló para {ticker_clean} - {e}")
 
-            if not resultado:
+            '''if not resultado:
                 try:
                     print(f"[INFO] Fallback: Rava para bono: {ticker_clean}")
                     st.text(f"[INFO] Fallback: Rava para bono: {ticker_clean}")
@@ -117,7 +117,7 @@ if uploaded_file:
                 except Exception as e:
                     errores_conexion.append(f"[Rava] {ticker_clean}: {e}")
                     print(f"[ERROR] Rava falló para {ticker_clean} - {e}")
-                    st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")
+                    st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")'''
 
 
             if resultado:

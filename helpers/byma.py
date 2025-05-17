@@ -1,9 +1,7 @@
 import requests
-from bs4 import BeautifulSoup
 import json
 import os
 import time
-from playwright.sync_api import sync_playwright
 import pandas as pd
 import streamlit as st
 
@@ -34,134 +32,75 @@ def guardar_cache(symbol, data):
     with open(path, "w") as f:
         json.dump(data, f)
 
-def obtener_precio_bono_bymadata(symbol):
-    log_debug(f"[INFO] Consulta la API pública BYMA Open Data sin autenticación.")
+def obtener_token_byma():
+    try:
+        log_debug("[BYMA Auth] Obteniendo token de acceso...")
+        url = "https://api.byma.com.ar/token"
+        client_id = st.secrets["byma"]["client_id"]
+        client_secret = st.secrets["byma"]["client_secret"]
+
+        payload = {
+            "grant_type": "client_credentials",
+            "client_id": client_id,
+            "client_secret": client_secret
+        }
+        headers = {"Content-Type": "application/x-www-form-urlencoded"}
+
+        r = requests.post(url, data=payload, headers=headers, timeout=10)
+        r.raise_for_status()
+        token_data = r.json()
+        return token_data.get("access_token")
+    except Exception as e:
+        log_debug(f"[BYMA Auth] Error al obtener token: {e}")
+        return None
+
+def obtener_precio_bono_byma(symbol):
+    log_debug(f"[BYMA] 🔍 Buscando datos para {symbol} desde API privada BYMA")
     try:
         cached = obtener_cache(symbol)
         if cached:
-            log_debug(f"[BYMA API] Usando cache local para {symbol}")
+            log_debug(f"[BYMA] Usando cache local para {symbol}")
             return cached
 
-        url = f"https://api.bymadata.com.ar/v1/marketdata/bonds/detail?symbol={symbol.upper()}"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(url, headers=headers, timeout=10, verify=False)
+        token = obtener_token_byma()
+        if not token:
+            raise Exception("Token no disponible")
+
+        # 🔄 Endpoint correcto validado en la documentación oficial
+        url = f"https://api.byma.com.ar/v1/marketdata/instruments/detail?symbol={symbol.upper()}"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Accept": "application/json"
+        }
+
+        r = requests.get(url, headers=headers, timeout=10)
         r.raise_for_status()
         data = r.json()
 
-        precios = data.get("prices", {})
-        actual = float(precios.get("last", 0))
-        minimo = float(precios.get("min", 0))
-        maximo = float(precios.get("max", 0))
-        subida = round((maximo - actual) / actual * 100, 2) if actual > 0 else None
+        precios = data.get("price") or {}
+        last_price = float(precios.get("last") or 0)
+        min_price = float(precios.get("low") or 0)
+        max_price = float(precios.get("high") or 0)
+        subida = round((max_price - last_price) / last_price * 100, 2) if last_price > 0 else None
 
         result = {
             "Ticker": symbol.upper(),
-            "Actual": round(actual, 2),
-            "Mínimo": round(minimo, 2),
-            "Máximo": round(maximo, 2),
+            "Actual": round(last_price, 2),
+            "Mínimo": round(min_price, 2),
+            "Máximo": round(max_price, 2),
             "% Subida a Máx": subida,
-            "Fuente": "BYMA Open Data",
+            "Fuente": "BYMA API privada",
             "Hist": None
         }
 
         guardar_cache(symbol, result)
         return result
 
+    except requests.exceptions.RequestException as e:
+        log_debug(f"[BYMA] Error de red para {symbol}: {e}")
+        if hasattr(e, "response") and e.response is not None:
+            log_debug(f"[BYMA] Status: {e.response.status_code} - Cuerpo: {e.response.text}")
+        return None
     except Exception as e:
-        log_debug(f"[BYMA API] Error con {symbol}: {e}")
+        log_debug(f"[BYMA] Error inesperado para {symbol}: {e}")
         return None
-
-def obtener_precio_bono_playwright(symbol):
-    log_debug(f"[INFO] Fallback con Playwright desde open.bymadata.com.ar para {symbol}")
-    try:
-        with sync_playwright() as p:
-            browser = p.chromium.launch(headless=True)
-            context = browser.new_context()
-            page = context.new_page()
-            page.goto(f"https://open.bymadata.com.ar/#/technical-detail-bond?symbol={symbol.upper()}&settlementType=2", timeout=30000)
-            page.wait_for_selector("text=Precio Último", timeout=10000)
-
-            precio_texto = page.locator("//div[contains(text(),'Precio Último')]/following-sibling::div").first.inner_text().strip().replace("$", "").replace(",", ".")
-            precio = float(precio_texto)
-
-            rows = page.locator(".technical-detail__chart-container + div table tr").all()
-            datos = []
-            for row in rows[1:]:
-                cols = row.locator("td").all()
-                if len(cols) >= 2:
-                    fecha = cols[0].inner_text().strip()
-                    cierre = cols[1].inner_text().strip().replace("$", "").replace(",", ".")
-                    try:
-                        datos.append({"Fecha": fecha, "Close": float(cierre)})
-                    except:
-                        continue
-            df_hist = pd.DataFrame(datos)
-            df_hist["Fecha"] = pd.to_datetime(df_hist["Fecha"], dayfirst=True, errors='coerce')
-            df_hist = df_hist.dropna().set_index("Fecha").sort_index()
-
-            result = {
-                "Ticker": symbol.upper(),
-                "Actual": round(precio, 2),
-                "Fuente": "BYMA (Playwright Web)",
-                "Hist": df_hist.reset_index().to_dict(orient="list") if not df_hist.empty else None
-            }
-            browser.close()
-            return result
-    except Exception as e:
-        log_debug(f"[BYMA Playwright] Error para {symbol}: {e}")
-        return None
-
-def obtener_precio_bono_scraping(symbol):
-    log_debug(f"[INFO] Fallback con scraping clásico de la web de BYMA para {symbol}.")
-    try:
-        url = "https://www.byma.com.ar/mercado/cotizaciones"
-        headers = {"User-Agent": "Mozilla/5.0"}
-        r = requests.get(url, headers=headers, timeout=10, verify=False)
-
-        if r.status_code != 200:
-            log_debug(f"[BYMA Scraping] Error HTTP {r.status_code} para {symbol}")
-            return None
-
-        soup = BeautifulSoup(r.text, "html.parser")
-        tablas = soup.find_all("table")
-
-        for tabla in tablas:
-            if symbol.upper() in tabla.text.upper():
-                rows = tabla.find_all("tr")
-                for row in rows:
-                    if symbol.upper() in row.text.upper():
-                        cols = row.find_all("td")
-                        if len(cols) >= 2:
-                            try:
-                                precio_texto = cols[1].text.strip().replace("$", "").replace(",", ".")
-                                precio = float(precio_texto)
-                                return {
-                                    "Ticker": symbol.upper(),
-                                    "Actual": round(precio, 2),
-                                    "Fuente": "BYMA (scraping web)",
-                                    "Hist": None
-                                }
-                            except Exception as e:
-                                log_debug(f"[BYMA Scraping] Error parsing {symbol}: {e}")
-                                continue
-
-        log_debug(f"[BYMA Scraping] {symbol} no encontrado en tablas")
-        return None
-
-    except Exception as e:
-        log_debug(f"[BYMA Scraping] Excepción general para {symbol}: {e}")
-        return None
-
-def obtener_precio_bono_byma(symbol):
-    log_debug(f"[BYMA] 🔍 Buscando datos para {symbol}")
-    resultado = obtener_precio_bono_bymadata(symbol)
-    if resultado:
-        return resultado
-
-    log_debug(f"[BYMA] ⚠️ Fallback a scraping con Playwright para {symbol}")
-    resultado = obtener_precio_bono_playwright(symbol)
-    if resultado:
-        return resultado
-
-    log_debug(f"[BYMA] ⚠️ Fallback final a scraping web tradicional para {symbol}")
-    return obtener_precio_bono_scraping(symbol)

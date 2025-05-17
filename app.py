@@ -17,12 +17,10 @@ from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
 from helpers.byma import obtener_precio_bono_byma
 import subprocess
 import os
+import shutil
 
-PLAYWRIGHT_INSTALLED_FLAG = "/home/adminuser/.cache/ms-playwright/chromium"
-
-if not os.path.exists(PLAYWRIGHT_INSTALLED_FLAG):
-    print("▶ Instalando navegadores de Playwright...")
-    subprocess.run(["playwright", "install", "--with-deps"], check=True)
+if shutil.which("playwright") is None:
+    st.error("Playwright no está instalado correctamente.")
 
 if "debug_logs" not in st.session_state:
     st.session_state.debug_logs = []

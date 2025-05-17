@@ -186,13 +186,11 @@ if uploaded_file:
         st.subheader("Gráficos por activo")
         for _, fila in df_result.iterrows():
             st.markdown(f"---\n### {fila['Ticker']}")
-
-            # ✅ Convertir Hist a DataFrame si viene como dict (para evitar errores)
-            hist = fila.get('Hist')
+            hist = fila.get("Hist")
             if isinstance(hist, dict):
                 hist = pd.DataFrame(hist)
-            elif not isinstance(hist, pd.DataFrame):
-                hist = None  # Por si es float o cualquier otro tipo inválido
+            if isinstance(hist, pd.DataFrame) and hist.index.name == "Fecha":
+                hist = hist.reset_index()
 
             graficar_precio_historico(fila['Ticker'], hist)
             graficar_subida_maximo(fila['Ticker'], fila.get('Actual'), fila.get('Máximo'))

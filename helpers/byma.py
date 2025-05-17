@@ -30,7 +30,7 @@ def obtener_precio_bono_bymadata(symbol):
         return None
 
 def obtener_precio_bono_scraping(symbol):
-     print(f"[INFO] Fallback con scraping clásico de la web de BYMA.")
+    print(f"[INFO] Fallback con scraping clásico de la web de BYMA.")
     try:
         url = "https://www.byma.com.ar/mercado/cotizaciones"
         headers = {"User-Agent": "Mozilla/5.0"}

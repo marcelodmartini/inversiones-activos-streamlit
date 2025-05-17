@@ -90,6 +90,7 @@ if uploaded_file:
             if not resultado and es_bono:
                 try:
                     print(f"[INFO] Intentando scraping Rava para bono: {ticker_clean}")
+                    st.text(f"[INFO] Intentando scraping Rava para bono: {ticker_clean}")
                     fuentes_probadas.append("Rava")
                     precio_rava = obtener_precio_bono_rava(ticker_clean)
                     if precio_rava:

@@ -129,6 +129,9 @@ if uploaded_file:
             #         st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")
 
 
+            score_texto, score_numerico = calcular_score(resultado)
+            resultado["Score Final"] = score_texto
+            resultado["__orden_score"] = score_numerico
             if resultado:
                 resultado["Fuente"] = resultado.get("Fuente", "No informada")
                 resultado["Fuentes Probadas"] = ", ".join(fuentes_probadas)
@@ -152,10 +155,6 @@ if uploaded_file:
                 resultado = info_fundamental
                 resultado["Ticker"] = raw_ticker
                 resultado["Error"] = "No se encontró información en ninguna fuente"
-
-            score_texto, score_numerico = calcular_score(resultado)
-            resultado["Score Final"] = score_texto
-            resultado["__orden_score"] = score_numerico
 
             resultados.append(resultado)
 

@@ -16,6 +16,8 @@ from helpers.score import calcular_score
 from config import ES_CLOUD, ALPHA_VANTAGE_API_KEY
 from helpers.byma import obtener_precio_bono_byma
 
+if "debug_logs" not in st.session_state:
+    st.session_state.debug_logs = []
 
 # Título y fecha
 st.title("Análisis de Activos Financieros con Fallback Inteligente y Múltiples Fuentes")
@@ -188,4 +190,9 @@ if uploaded_file:
             st.text(err)
 
     csv = df_result.to_csv(index=False).encode('utf-8')
+
+    if st.session_state.debug_logs:
+        st.markdown("### 🛠️ Logs de Depuración")
+        st.text_area("Salida de depuración", "\n".join(st.session_state.debug_logs), height=300)
+
     st.download_button("Descargar resultados en CSV", data=csv, file_name="analisis_completo_activos.csv")

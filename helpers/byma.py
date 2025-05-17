@@ -1,4 +1,3 @@
-# helpers/byma.py
 import requests
 from bs4 import BeautifulSoup
 import json
@@ -6,11 +5,20 @@ import os
 import time
 from playwright.sync_api import sync_playwright
 import pandas as pd
+import streamlit as st
 
 CACHE_PATH = "/tmp/byma_cache"
 CACHE_TTL = 600  # segundos (10 minutos)
 
 os.makedirs(CACHE_PATH, exist_ok=True)
+
+def log_debug(msg):
+    print(msg)
+    try:
+        if "debug_logs" in st.session_state:
+            st.session_state.debug_logs.append(msg)
+    except:
+        pass
 
 def obtener_cache(symbol):
     path = os.path.join(CACHE_PATH, f"{symbol.upper()}.json")
@@ -27,11 +35,11 @@ def guardar_cache(symbol, data):
         json.dump(data, f)
 
 def obtener_precio_bono_bymadata(symbol):
-    print(f"[INFO] Consulta la API pública BYMA Open Data sin autenticación.")
+    log_debug(f"[INFO] Consulta la API pública BYMA Open Data sin autenticación.")
     try:
         cached = obtener_cache(symbol)
         if cached:
-            print(f"[BYMA API] Usando cache local para {symbol}")
+            log_debug(f"[BYMA API] Usando cache local para {symbol}")
             return cached
 
         url = f"https://api.bymadata.com.ar/v1/marketdata/bonds/detail?symbol={symbol.upper()}"
@@ -53,18 +61,18 @@ def obtener_precio_bono_bymadata(symbol):
             "Máximo": round(maximo, 2),
             "% Subida a Máx": subida,
             "Fuente": "BYMA Open Data",
-            "Hist": None  # No se provee histórico en esta API
+            "Hist": None
         }
 
         guardar_cache(symbol, result)
         return result
 
     except Exception as e:
-        print(f"[BYMA API] Error con {symbol}: {e}")
+        log_debug(f"[BYMA API] Error con {symbol}: {e}")
         return None
 
 def obtener_precio_bono_playwright(symbol):
-    print(f"[INFO] Fallback con Playwright desde open.bymadata.com.ar para {symbol}")
+    log_debug(f"[INFO] Fallback con Playwright desde open.bymadata.com.ar para {symbol}")
     try:
         with sync_playwright() as p:
             browser = p.chromium.launch(headless=True)
@@ -76,7 +84,6 @@ def obtener_precio_bono_playwright(symbol):
             precio_texto = page.locator("//div[contains(text(),'Precio Último')]/following-sibling::div").first.inner_text().strip().replace("$", "").replace(",", ".")
             precio = float(precio_texto)
 
-            # Obtener histórico desde tabla
             rows = page.locator(".technical-detail__chart-container + div table tr").all()
             datos = []
             for row in rows[1:]:
@@ -101,18 +108,18 @@ def obtener_precio_bono_playwright(symbol):
             browser.close()
             return result
     except Exception as e:
-        print(f"[BYMA Playwright] Error para {symbol}: {e}")
+        log_debug(f"[BYMA Playwright] Error para {symbol}: {e}")
         return None
 
 def obtener_precio_bono_scraping(symbol):
-    print(f"[INFO] Fallback con scraping clásico de la web de BYMA.")
+    log_debug(f"[INFO] Fallback con scraping clásico de la web de BYMA para {symbol}.")
     try:
         url = "https://www.byma.com.ar/mercado/cotizaciones"
         headers = {"User-Agent": "Mozilla/5.0"}
         r = requests.get(url, headers=headers, timeout=10, verify=False)
 
         if r.status_code != 200:
-            print(f"[BYMA Scraping] Error HTTP {r.status_code} para {symbol}")
+            log_debug(f"[BYMA Scraping] Error HTTP {r.status_code} para {symbol}")
             return None
 
         soup = BeautifulSoup(r.text, "html.parser")
@@ -132,30 +139,29 @@ def obtener_precio_bono_scraping(symbol):
                                     "Ticker": symbol.upper(),
                                     "Actual": round(precio, 2),
                                     "Fuente": "BYMA (scraping web)",
-                                    "Hist": hist  # 👉 agregado para el gráfico histórico
+                                    "Hist": None
                                 }
                             except Exception as e:
-                                print(f"[BYMA Scraping] Error parsing {symbol}: {e}")
+                                log_debug(f"[BYMA Scraping] Error parsing {symbol}: {e}")
                                 continue
 
-        print(f"[BYMA Scraping] {symbol} no encontrado en tablas")
+        log_debug(f"[BYMA Scraping] {symbol} no encontrado en tablas")
         return None
 
     except Exception as e:
-        print(f"[BYMA Scraping] Excepción general para {symbol}: {e}")
+        log_debug(f"[BYMA Scraping] Excepción general para {symbol}: {e}")
         return None
 
 def obtener_precio_bono_byma(symbol):
-    """Consulta con fallback: API pública -> Playwright -> Scraping clásico."""
-    print(f"[BYMA] 🔍 Buscando datos para {symbol}")
+    log_debug(f"[BYMA] 🔍 Buscando datos para {symbol}")
     resultado = obtener_precio_bono_bymadata(symbol)
     if resultado:
         return resultado
 
-    print(f"[BYMA] ⚠️ Fallback a scraping con Playwright para {symbol}")
+    log_debug(f"[BYMA] ⚠️ Fallback a scraping con Playwright para {symbol}")
     resultado = obtener_precio_bono_playwright(symbol)
     if resultado:
         return resultado
 
-    print(f"[BYMA] ⚠️ Fallback final a scraping web tradicional para {symbol}")
+    log_debug(f"[BYMA] ⚠️ Fallback final a scraping web tradicional para {symbol}")
     return obtener_precio_bono_scraping(symbol)

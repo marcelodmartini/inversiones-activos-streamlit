@@ -23,6 +23,6 @@ def analizar_con_investpy(nombre, pais, fecha_inicio, fecha_fin):
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        errores_conexion.append(f"[Investpy] {nombre}: {e}")
+        print(f"[Investpy] {nombre}: {e}")
         print(f"[ERROR] Investpy falló para {nombre} - {e}")
         warnings.warn(f"DEBUG: Investpy falló para {nombre} - {e}")

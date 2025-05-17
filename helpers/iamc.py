@@ -18,6 +18,6 @@ def obtener_precio_bono_iamc(ticker):
             "Fuente": "IAMC (archivo local)"
         }
     except Exception as e:
-        errores_conexion.append(f"[IAMC] {ticker}: {e}")
+        print(f"[IAMC] {ticker}: {e}")
         print(f"[ERROR] IAMC falló para {ticker} - {e}")
         return None

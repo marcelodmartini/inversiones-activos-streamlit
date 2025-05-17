@@ -33,6 +33,6 @@ def analizar_con_coingecko(coin_id):
             "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        errores_conexion.append(f"[CoinGecko] {coin_id}: {e}")
+        print(f"[CoinGecko] {coin_id}: {e}")
         print(f"[ERROR] CoinGecko falló para {coin_id} - {e}")
         warnings.warn(f"DEBUG: CoinGecko falló para {coin_id} - {e}")

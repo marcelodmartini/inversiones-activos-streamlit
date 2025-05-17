@@ -27,6 +27,6 @@ def analizar_con_alphavantage(ticker, fecha_inicio, fecha_fin):
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        errores_conexion.append(f"[Alpha Vantage] {ticker}: {e}")
+        print(f"[Alpha Vantage] {ticker}: {e}")
         print(f"[ERROR] Alpha Vantage falló para {ticker} - {e}")
         warnings.warn(f"DEBUG: Alpha Vantage falló para {ticker} - {e}")

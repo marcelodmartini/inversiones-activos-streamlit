@@ -60,7 +60,7 @@ def obtener_precio_bono_iamc(ticker):
             "Fuente": "IAMC (archivo local)"
         }
     except Exception as e:
-        errores_conexion.append(f"[IAMC] {ticker}: {e}")
+        print(f"[IAMC] {ticker}: {e}")
         print(f"[ERROR] IAMC falló para {ticker} - {e}")
         return None
 
@@ -70,7 +70,7 @@ def obtener_precio_bono_byma(ticker):
         headers = {"User-Agent": "Mozilla/5.0"}
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200:
-            errores_conexion.append(f"[BYMA] {ticker}: status {r.status_code}")
+            print(f"[BYMA] {ticker}: status {r.status_code}")
             return None
         soup = BeautifulSoup(r.text, "html.parser")
         tablas = soup.find_all("table")
@@ -90,10 +90,10 @@ def obtener_precio_bono_byma(ticker):
                                 }
                             except:
                                 continue
-        errores_conexion.append(f"[BYMA] {ticker}: no se encontró en tablas")
+        print(f"[BYMA] {ticker}: no se encontró en tablas")
         return None
     except Exception as e:
-        errores_conexion.append(f"[BYMA] {ticker}: {e}")
+        print(f"[BYMA] {ticker}: {e}")
         print(f"[ERROR] BYMA falló para {ticker} - {e}")
         return None
 
@@ -107,12 +107,12 @@ def obtener_precio_bono_rava(ticker):
         }
         r = requests.get(url, headers=headers, timeout=10)
         if r.status_code != 200 or "Forbidden" in r.text:
-            errores_conexion.append(f"[Rava] {ticker}: {r.status_code} - Acceso denegado")
+            print(f"[Rava] {ticker}: {r.status_code} - Acceso denegado")
             return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
         soup = BeautifulSoup(r.text, 'html.parser')
         tabla = soup.find("table")
         if not tabla:
-            errores_conexion.append(f"[Rava] {ticker}: tabla no encontrada")
+            print(f"[Rava] {ticker}: tabla no encontrada")
             return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
         rows = tabla.find_all("tr")[1:]
         precios = []
@@ -125,7 +125,7 @@ def obtener_precio_bono_rava(ticker):
                 except:
                     continue
         if not precios:
-            errores_conexion.append(f"[Rava] {ticker}: no se extrajo ningún precio")
+            print(f"[Rava] {ticker}: no se extrajo ningún precio")
             return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
         min_price = min(precios)
         max_price = max(precios)
@@ -140,7 +140,7 @@ def obtener_precio_bono_rava(ticker):
             "Fuente": "Rava Bursátil (Historial)"
         }
     except Exception as e:
-        errores_conexion.append(f"[Rava] {ticker}: {e}")
+        print(f"[Rava] {ticker}: {e}")
         print(f"[ERROR] Rava falló para {ticker} - {e}")
         st.text(f"DEBUG: Rava falló para {ticker} - {e}")
         return obtener_precio_bono_iamc(ticker) or obtener_precio_bono_byma(ticker)
@@ -298,7 +298,7 @@ def analizar_con_yfinance(ticker):
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        errores_conexion.append(f"[Yahoo Finance] {ticker}: {e}")
+        print(f"[Yahoo Finance] {ticker}: {e}")
         print(f"[ERROR] Yahoo Finance falló para {ticker} - {e}")
         warnings.warn(f"DEBUG: Yahoo Finance falló para {ticker} - {e}")
         st.text(f"DEBUG: Yahoo Finance falló para {ticker} - {e}")
@@ -328,7 +328,7 @@ def analizar_con_alphavantage(ticker):
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        errores_conexion.append(f"[Alpha Vantage] {ticker}: {e}")
+        print(f"[Alpha Vantage] {ticker}: {e}")
         print(f"[ERROR] Alpha Vantage falló para {ticker} - {e}")
         warnings.warn(f"DEBUG: Alpha Vantage falló para {ticker} - {e}")
         st.text(f"DEBUG: Alpha Vantage falló para {ticker} - {e}")
@@ -366,7 +366,7 @@ def analizar_con_coingecko(coin_id):
             "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        errores_conexion.append(f"[CoinGecko] {coin_id}: {e}")
+        print(f"[CoinGecko] {coin_id}: {e}")
         print(f"[ERROR] CoinGecko falló para {coin_id} - {e}")
         warnings.warn(f"DEBUG: CoinGecko falló para {coin_id} - {e}")
         st.text(f"DEBUG: CoinGecko falló para {coin_id} - {e}")
@@ -395,7 +395,7 @@ def analizar_con_investpy(nombre, pais):
             "Actual": round(current_price, 2), "% Subida a Máx": round(subida, 2)
         }
     except Exception as e:
-        errores_conexion.append(f"[Investpy] {nombre}: {e}")
+        print(f"[Investpy] {nombre}: {e}")
         print(f"[ERROR] Investpy falló para {nombre} - {e}")
         warnings.warn(f"DEBUG: Investpy falló para {nombre} - {e}")
         st.text(f"DEBUG: Investpy falló para {nombre} - {e}")
@@ -431,7 +431,7 @@ if uploaded_file:
                     fuentes_probadas.append("Yahoo Finance")
                     resultado = analizar_con_yfinance(ticker_real)
                 except Exception as e:
-                    errores_conexion.append(f"[Yahoo Finance] {ticker_clean}: {e}")
+                    print(f"[Yahoo Finance] {ticker_clean}: {e}")
                     print(f"[ERROR] Yahoo Finance falló para {ticker_clean} - {e}")
 
             if not resultado and ALPHA_VANTAGE_API_KEY and not ES_CLOUD:
@@ -440,7 +440,7 @@ if uploaded_file:
                     fuentes_probadas.append("Alpha Vantage")
                     resultado = analizar_con_alphavantage(ticker_clean)
                 except Exception as e:
-                    errores_conexion.append(f"[Alpha Vantage] {ticker_clean}: {e}")
+                    print(f"[Alpha Vantage] {ticker_clean}: {e}")
                     print(f"[ERROR] Alpha Vantage falló para {ticker_clean} - {e}")
 
             if not resultado and raw_ticker.lower() in criptos_disponibles:
@@ -449,7 +449,7 @@ if uploaded_file:
                     fuentes_probadas.append("CoinGecko")
                     resultado = analizar_con_coingecko(raw_ticker.lower())
                 except Exception as e:
-                    errores_conexion.append(f"[CoinGecko] {raw_ticker.lower()}: {e}")
+                    print(f"[CoinGecko] {raw_ticker.lower()}: {e}")
                     print(f"[ERROR] CoinGecko falló para {raw_ticker.lower()} - {e}")
                     st.text(f"DEBUG: CoinGecko falló para {raw_ticker.lower()} - {e}")
 
@@ -460,7 +460,7 @@ if uploaded_file:
                     fuentes_probadas.append(f"Investpy ({pais})")
                     resultado = analizar_con_investpy(ticker_clean, pais)
                 except Exception as e:
-                    errores_conexion.append(f"[Investpy] {ticker_clean}: {e}")
+                    print(f"[Investpy] {ticker_clean}: {e}")
                     print(f"[ERROR] Investpy falló para {ticker_clean} - {e}")
 
             if not resultado and es_bono:
@@ -473,7 +473,7 @@ if uploaded_file:
                         resultado["Tipo"] = "Bono"
                         resultado["Advertencia"] = "⚠️ Solo precio disponible, sin métricas fundamentales"
                 except Exception as e:
-                    errores_conexion.append(f"[Rava] {ticker_clean}: {e}")
+                    print(f"[Rava] {ticker_clean}: {e}")
                     print(f"[ERROR] Rava falló para {ticker_clean} - {e}")
                     warnings.warn(f"DEBUG: Rava falló para {ticker_clean} - {e}")
                     st.text(f"DEBUG: Rava falló para {ticker_clean} - {e}")
